@@ -62,7 +62,7 @@ jobs:
             ${{ runner.os }}-npm-
 
       - name: Install Composer dependencies
-        run: composer install --no-interaction --prefer-dist
+        run: composer install --no-interaction --prefer-dist --no-scripts
 
       - name: Install npm dependencies
         run: npm install
@@ -76,7 +76,7 @@ jobs:
 
             sed -i "s/APP_ENV=.*/APP_ENV=${{ env.APP_ENV }}/" .env
             sed -i "s/APP_DEBUG=.*/APP_DEBUG=true/" .env
-            sed -i "s/DB_HOST=.*/DB_HOST=mysql-service/" .env
+            sed -i "s/DB_HOST=.*/DB_HOST=127.0.0.1/" .env
             sed -i "s/DB_PORT=.*/DB_PORT=3306/" .env
             sed -i "s/DB_DATABASE=.*/DB_DATABASE=${{ env.MYSQL_DATABASE }}/" .env
             sed -i "s/DB_USERNAME=.*/DB_USERNAME=${{ env.MYSQL_USER }}/" .env
