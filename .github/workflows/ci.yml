@@ -85,9 +85,21 @@ jobs:
             mkdir -p storage/framework/{sessions,views,cache}
             mkdir -p bootstrap/cache
 
+      - name: Wait for MySQL to be ready
+        run: |
+            echo "== Attente de MySQL... =="
+            for i in {1..30}; do
+            if mysql -h 127.0.0.1 -u${{ env.MYSQL_USER }} -p${{ env.MYSQL_PASSWORD }} -e "SELECT 1" 2>/dev/null; then
+             echo "== MySQL est prêt =="
+             break
+            fi
+            echo "Tentative $i/30..."
+            sleep 2
+            done
+
       - name: Setup Database
         run: |
             echo "== Configuration de la base de données... =="
-            mysql -h mysql-service -u${{ env.MYSQL_USER }} -p${{ env.MYSQL_PASSWORD }} -e "CREATE DATABASE IF NOT EXISTS ${{ env.MYSQL_DATABASE }};"
-            php artisan migrate
+            mysql -h 127.0.0.1 -u${{ env.MYSQL_USER }} -p${{ env.MYSQL_PASSWORD }} -e "CREATE DATABASE IF NOT EXISTS ${{ env.MYSQL_DATABASE }};"
+            php artisan migrate --force
             echo "== Base de données configurée =="
