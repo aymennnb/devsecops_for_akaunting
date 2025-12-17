@@ -1,0 +1,13 @@
+name: Akaunting DevSecOps CI
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  job1:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: First pipeline test
+        run: echo "Hello from my first GitHub Actions pipeline"
