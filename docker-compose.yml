@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: akaunting_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: akaunting
+      MYSQL_USER: akaunting
+      MYSQL_PASSWORD: akauntingpass
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - akaunting_network
+
+  akaunting:
+    image: akaunting/akaunting:latest
+    container_name: akaunting_app
+    restart: unless-stopped
+    depends_on:
+      - mysql
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_NAME: akaunting
+      DB_USERNAME: akaunting
+      DB_PASSWORD: akauntingpass
+      DB_PREFIX: akon_
+    ports:
+      - "8000:80"
+    volumes:
+      - akaunting_data:/var/www/html
+    networks:
+      - akaunting_network
+
+volumes:
+  mysql_data:
+  akaunting_data:
+
+networks:
+  akaunting_network:
+    driver: bridge

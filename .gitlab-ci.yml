@@ -1,0 +1,7 @@
+stages:
+  - test
+
+test1:
+  stage: test
+  script:
+    - echo "=== Stage TEST1 ==="
