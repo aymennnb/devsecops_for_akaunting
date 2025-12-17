@@ -1,10 +1,9 @@
 name: Akaunting DevSecOps CI/CD
 
 env:
-  MYSQL_DATABASE: akaunting
-  MYSQL_USER: ak_user
-  MYSQL_PASSWORD: ak_password
-  MYSQL_HOST: mysql-service
+  MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
+  MYSQL_USER: ${{ secrets.MYSQL_USER }}
+  MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
   APP_ENV: testing
 
 on:
