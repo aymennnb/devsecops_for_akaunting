@@ -23,7 +23,7 @@ jobs:
           MYSQL_DATABASE: ${{ env.MYSQL_DATABASE }}
           MYSQL_USER: ${{ env.MYSQL_USER }}
           MYSQL_PASSWORD: ${{ env.MYSQL_PASSWORD }}
-          MYSQL_ROOT_PASSWORD: ${{ env.MYSQL_PASSWORD }}
+          MYSQL_ROOT_PASSWORD: ${{ env.MYSQL_ROOT_PASSWORD }}
         options: >-
           --health-cmd="mysqladmin ping"
           --health-interval=10s
@@ -102,3 +102,59 @@ jobs:
             mysql -h 127.0.0.1 -u${{ env.MYSQL_USER }} -p${{ env.MYSQL_PASSWORD }} -e "CREATE DATABASE IF NOT EXISTS ${{ env.MYSQL_DATABASE }};"
             php artisan migrate --force
             echo "== Base de données configurée =="
+
+
+  run-tests:
+    runs-on: ubuntu-latest
+    needs: install-dependencies
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
+          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+
+      - uses: actions/cache@v3
+        with:
+          path: vendor
+          key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
+
+      - name: Check dependencies
+        run: |
+          if [ ! -d "vendor" ]; then
+            echo "== vendor non trouvé, installation... =="
+            composer install --no-scripts
+          else
+            echo "== Utilisation du cache Composer =="
+          fi
+
+      - name: Setup test environment
+        run: |
+          echo "== Configuration de l'environnement de test... =="
+          cp .env.example .env
+          php artisan key:generate
+          sed -i "s/DB_HOST=.*/DB_HOST=127.0.0.1/" .env
+
+      - name: Run unit tests
+        run: |
+          echo "== Lancement des tests unitaires... =="
+          vendor/bin/phpunit --testsuite Unit
+          echo "== Tests unitaires terminés =="
+
+      - name: Run feature tests
+        run: |
+          echo "== Lancement des tests fonctionnels... =="
+          vendor/bin/phpunit --testsuite Feature
+          echo "== Tests fonctionnels terminés =="
+
+      - name: Test summary
+        run: echo "== Tous les tests exécutés avec succès =="
