@@ -12,6 +12,7 @@ on:
 
 jobs:
   install-dependencies:
+    name: install Project dependencies
     runs-on: ubuntu-latest
 
     services:
@@ -106,6 +107,7 @@ jobs:
 
 
   run-tests:
+    name: unit & feature tests
     runs-on: ubuntu-latest
     needs: install-dependencies
     continue-on-error: true
@@ -173,6 +175,7 @@ jobs:
 #              feature-report.xml
 
   build:
+    name: Build docker image
     runs-on: ubuntu-latest
     needs: run-tests
 
@@ -229,7 +232,7 @@ jobs:
       - name: Download Docker image artifact
         uses: actions/download-artifact@v4
         with:
-          name: docker-image-${{ github.sha }}
+          name: docker-image-${{ env.DOCKER_IMAGE_NAME }}-${{ github.sha }}
           path: ./
 
       - name: Load Docker image from tar file
