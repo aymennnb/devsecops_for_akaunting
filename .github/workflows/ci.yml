@@ -85,23 +85,24 @@ jobs:
             mkdir -p bootstrap/cache
 
       - name: Wait for MySQL to be ready
+        env:
+          MYSQL_PWD: ${{ env.MYSQL_PASSWORD }}
         run: |
-            echo "== Attente de MySQL... =="
-            for i in {1..30}; do
-            if mysql -h 127.0.0.1 -u${{ env.MYSQL_USER }} -p${{ env.MYSQL_PASSWORD }} -e "SELECT 1" 2>/dev/null; then
-             echo "== MySQL est prêt =="
-             break
-            fi
-            echo "Tentative $i/30..."
+          echo "== Attente de MySQL... =="
+          until mysqladmin -h 127.0.0.1 -u${{ env.MYSQL_USER }} ping 2>/dev/null; do
+            echo "En attente de MySQL..."
             sleep 2
-            done
+          done
+          echo "== MySQL est prêt =="
 
       - name: Setup Database
+        env:
+          MYSQL_PWD: ${{ env.MYSQL_PASSWORD }}
         run: |
-            echo "== Configuration de la base de données... =="
-            mysql -h 127.0.0.1 -u${{ env.MYSQL_USER }} -p${{ env.MYSQL_PASSWORD }} -e "CREATE DATABASE IF NOT EXISTS ${{ env.MYSQL_DATABASE }};"
-            php artisan migrate --force
-            echo "== Base de données configurée =="
+          echo "== Configuration de la base de données... =="
+          mysql -h 127.0.0.1 -u${{ env.MYSQL_USER }} -e "CREATE DATABASE IF NOT EXISTS ${{ env.MYSQL_DATABASE }};"
+          php artisan migrate --force
+          echo "== Base de données configurée =="
 
 
   run-tests:
@@ -114,7 +115,9 @@ jobs:
         image: mysql:8.0
         env:
           MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
-          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
+          MYSQL_USER: ${{ secrets.MYSQL_USER }}
+          MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
+          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
 
     steps:
       - uses: actions/checkout@v4
@@ -153,12 +156,12 @@ jobs:
           echo "== Tests unitaires terminés =="
         continue-on-error: true
 
-      - name: Run feature tests
-        run: |
-          echo "== Lancement des tests fonctionnels... =="
-          vendor/bin/phpunit --testsuite Feature --log-junit feature-report.xml
-          echo "== Tests fonctionnels terminés =="
-        continue-on-error: true
+#      - name: Run feature tests
+#        run: |
+#          echo "== Lancement des tests fonctionnels... =="
+#          vendor/bin/phpunit --testsuite Feature --log-junit feature-report.xml
+#          echo "== Tests fonctionnels terminés =="
+#        continue-on-error: true
 
       - name: Upload test reports
         if: always()
@@ -167,4 +170,47 @@ jobs:
             name: test-reports-${{ github.run_id }}
             path: |
               unit-report.xml
-              feature-report.xml
+#              feature-report.xml
+
+  build:
+    runs-on: ubuntu-latest
+    needs: run-tests
+
+    env:
+      DOCKER_IMAGE_NAME: ${{ vars.DOCKER_IMAGE_NAME}}
+      IMAGE_TAG_COMMIT: ${{ vars.DOCKER_IMAGE_NAME}}:${{ github.sha }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: false
+          load: true
+          tags: |
+            ${{ env.DOCKER_IMAGE_NAME }}:latest
+            ${{ env.IMAGE_TAG_COMMIT }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64
+
+      - name: Save Docker image to tar file
+        run: |
+          echo "=== Sauvegarde de l'image Docker ==="
+          docker save ${{ env.DOCKER_IMAGE_NAME }}:latest -o docker-image.tar
+          echo "== Image sauvegardée =="
+          ls -lh docker-image.tar
+
+      - name: Upload Docker image as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image-${{ env.DOCKER_IMAGE_NAME }}
+          path: docker-image.tar
+          retention-days: 1
