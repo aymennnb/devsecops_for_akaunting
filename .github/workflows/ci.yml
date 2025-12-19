@@ -214,43 +214,98 @@ jobs:
           path: docker-image.tar
           retention-days: 1
 
-  push:
+  scan:
+    name: Scan docker image with Trivy
     runs-on: ubuntu-latest
     needs: build
     env:
-      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-      DOCKER_IMAGE_NAME: ${{ vars.DOCKER_IMAGE_NAME}}
-      DOCKERHUB_TAG: ${{ secrets.DOCKERHUB_USERNAME }}/${{ vars.DOCKER_IMAGE_NAME }}:${{ github.sha }}
+      DOCKER_IMAGE_NAME: ${{ vars.DOCKER_IMAGE_NAME }}
+      IMAGE_TAG: ${{ github.sha }}
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Download Docker image artifact
         uses: actions/download-artifact@v4
         with:
-          name: docker-image-${{ env.DOCKER_IMAGE_NAME }}-${{ github.sha }}
+          name: docker-image-${{ github.sha }}
           path: ./
 
       - name: Load Docker image from tar file
         run: |
-            echo "=== Chargement de l'image Docker depuis le fichier tar ==="
-            docker load -i docker-image.tar
-            echo "== Images chargée =="
-             docker images
+          echo "=== Chargement de l'image Docker depuis le fichier tar ==="
+          docker load -i docker-image.tar
+          echo "== Images chargées =="
+          docker images
 
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
+      - name: Set Date
+        id: set-date
+        run: echo "DATE=$(date +%m.%d.%Y)" >> $GITHUB_ENV
+
+      - name: Create output directory
+        run: mkdir -p "GitHub Actions/Trivy Automation"
+
+      - name: Install Trivy
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y curl
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sudo sh -s -- -b /usr/local/bin v0.57.0
+
+      - name: Download Trivy vulnerability database
+        run: trivy image --download-db-only
+
+      - name: Run Trivy vulnerability scanner
+        run: |
+          OUTPUT_FILE="GitHub Actions/Trivy Automation/scan-results-${DATE}.json"
+          mkdir -p "GitHub Actions/Trivy Automation"
+          trivy image --format json --ignore-unfixed --vuln-type os,library --severity CRITICAL,HIGH,MEDIUM,LOW -o "$OUTPUT_FILE" ${{ env.DOCKER_IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+
+      - name: Upload scan results as artifact
+        uses: actions/upload-artifact@v4
         with:
-            username: ${{ env.DOCKERHUB_USERNAME }}
-            password: ${{ secrets.DOCKERHUB_PASSWORD }}
+          name: trivy-scan-results-${{ env.DATE }}
+          path: GitHub Actions/Trivy Automation/
+          retention-days: 7
 
-      - name: Tag image for Docker Hub
-        run: |
-            echo "=== Tag de l'image pour Docker Hub ==="
-            docker tag ${{ env.DOCKER_IMAGE_NAME }}:${{ github.sha }} ${{ env.DOCKERHUB_TAG }}
-            echo "== Images taggées =="
-            docker images | grep ${{ env.DOCKERHUB_USERNAME }}
 
-      - name: Push to Docker Hub
-        run: |
-            echo "=== Push vers Docker Hub ==="
-            docker push ${{ env.DOCKERHUB_TAG }}
-            echo "== Images poussées avec succès =="
+#  push:
+#    runs-on: ubuntu-latest
+#    needs: build
+#    env:
+#      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+#      DOCKER_IMAGE_NAME: ${{ vars.DOCKER_IMAGE_NAME}}
+#      DOCKERHUB_TAG: ${{ secrets.DOCKERHUB_USERNAME }}/${{ vars.DOCKER_IMAGE_NAME }}:${{ github.sha }}
+#
+#    steps:
+#      - name: Download Docker image artifact
+#        uses: actions/download-artifact@v4
+#        with:
+#          name: docker-image-${{ env.DOCKER_IMAGE_NAME }}-${{ github.sha }}
+#          path: ./
+#
+#      - name: Load Docker image from tar file
+#        run: |
+#            echo "=== Chargement de l'image Docker depuis le fichier tar ==="
+#            docker load -i docker-image.tar
+#            echo "== Images chargée =="
+#             docker images
+#
+#      - name: Login to Docker Hub
+#        uses: docker/login-action@v3
+#        with:
+#            username: ${{ env.DOCKERHUB_USERNAME }}
+#            password: ${{ secrets.DOCKERHUB_PASSWORD }}
+#
+#      - name: Tag image for Docker Hub
+#        run: |
+#            echo "=== Tag de l'image pour Docker Hub ==="
+#            docker tag ${{ env.DOCKER_IMAGE_NAME }}:${{ github.sha }} ${{ env.DOCKERHUB_TAG }}
+#            echo "== Images taggées =="
+#            docker images | grep ${{ env.DOCKERHUB_USERNAME }}
+#
+#      - name: Push to Docker Hub
+#        run: |
+#            echo "=== Push vers Docker Hub ==="
+#            docker push ${{ env.DOCKERHUB_TAG }}
+#            echo "== Images poussées avec succès =="
