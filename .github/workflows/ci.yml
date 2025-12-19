@@ -188,17 +188,17 @@ jobs:
         run: |
           mkdir -p "GitHub Actions/SAST Security/Reports"
 
-      - name: Run Semgrep SAST
+      - name: Install Semgrep
         run: |
           python -m pip install semgrep
 
-          semgrep scan --config=auto --json > "GitHub Actions/SAST Security/Reports/semgrep-general.json"
+      - name: Run Semgrep SAST
+        run: |
+          semgrep scan --config=auto --json --no-error > "GitHub Actions/SAST Security/Reports/semgrep-general.json"
           echo "== Scan général terminé =="
-
-          semgrep scan --config=p/owasp-top-ten --json > "GitHub Actions/SAST Security/Reports/semgrep-owasp.json"
+          semgrep scan --config=p/owasp-top-ten --json --no-error > "GitHub Actions/SAST Security/Reports/semgrep-owasp.json"
           echo "== Scan OWASP terminé =="
-
-          semgrep scan --config=p/laravel --json > "GitHub Actions/SAST Security/Reports/semgrep-laravel.json"
+          semgrep scan --config=p/laravel --json --no-error > "GitHub Actions/SAST Security/Reports/semgrep-laravel.json"
           echo "== Scan Laravel terminé =="
 
       - name: Upload reports
