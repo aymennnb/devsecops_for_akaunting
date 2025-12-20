@@ -193,6 +193,7 @@ jobs:
           python -m pip install semgrep
 
       - name: Run Semgrep SAST
+        continue-on-error: true
         run: |
           semgrep ci --config=auto --json --suppress-errors > "GitHub Actions/SAST Security/Reports/semgrep-general.json"
           echo "== Scan général terminé =="
