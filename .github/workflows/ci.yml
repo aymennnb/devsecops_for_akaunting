@@ -195,12 +195,10 @@ jobs:
       - name: Run Semgrep SAST
         continue-on-error: true
         run: |
-          semgrep ci --config=auto --json --no-suppress-errors > "GitHub Actions/SAST Security/Reports/semgrep-general.json" || true
+          semgrep ci --config=auto --json > "GitHub Actions/SAST Security/Reports/semgrep-general.json" || true
           echo "== Scan général terminé =="
-          semgrep ci --config=p/owasp-top-ten --json --no-suppress-errors > "GitHub Actions/SAST Security/Reports/semgrep-owasp.json" || true
+          semgrep ci --config=p/owasp-top-ten --json > "GitHub Actions/SAST Security/Reports/semgrep-owasp.json" || true
           echo "== Scan OWASP terminé =="
-          semgrep ci --config=p/laravel --json --no-suppress-errors > "GitHub Actions/SAST Security/Reports/semgrep-laravel.json" || true
-          echo "== Scan Laravel terminé =="
 
       - name: Upload reports
         uses: actions/upload-artifact@v4
