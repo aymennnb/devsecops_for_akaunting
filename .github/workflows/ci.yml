@@ -179,7 +179,7 @@ jobs:
   semgrep-sast:
     name: SAST Security with Semgrep
     runs-on: ubuntu-latest
-    needs: install
+    needs: prepare
     continue-on-error: true
 
     steps:
