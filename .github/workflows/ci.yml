@@ -210,6 +210,57 @@ jobs:
             GitHub Actions/SAST Security/Reports/
           retention-days: 7
 
+  upload-to-defectdojo:
+    name: Upload results to DefectDojo
+    runs-on: ubuntu-latest
+    needs: semgrep-sast
+    continue-on-error: true
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download Semgrep artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: sast-reports-${{ github.sha }}
+          path: ./reports
+
+      - name: Install DefectDojo CLI
+        run: |
+          python -m pip install defectdojo-api-client
+
+      - name: Upload Semgrep results to DefectDojo
+        continue-on-error: true
+        run: |
+          echo "== Uploading Semgrep reports to DefectDojo =="
+          
+          # Upload general Semgrep scan
+          if [ -f "reports/semgrep-general.json" ]; then
+            curl -X POST "${{ secrets.DEFECTDOJO_URL }}/api/v2/import-scan/" \
+              -H "Authorization: Token ${{ secrets.DEFECTDOJO_API_TOKEN }}" \
+              -H "Content-Type: multipart/form-data" \
+              -F "file=@reports/semgrep-general.json" \
+              -F "scan_type=Semgrep JSON Report" \
+              -F "engagement=${{ secrets.DEFECTDOJO_ENGAGEMENT_ID }}" \
+              -F "verified=false" \
+              -F "close_old_findings=false"
+            echo "== General Semgrep scan uploaded =="
+          fi
+          
+          # Upload OWASP Semgrep scan
+          if [ -f "reports/semgrep-owasp.json" ]; then
+            curl -X POST "${{ secrets.DEFECTDOJO_URL }}/api/v2/import-scan/" \
+              -H "Authorization: Token ${{ secrets.DEFECTDOJO_API_TOKEN }}" \
+              -H "Content-Type: multipart/form-data" \
+              -F "file=@reports/semgrep-owasp.json" \
+              -F "scan_type=Semgrep JSON Report" \
+              -F "engagement=${{ secrets.DEFECTDOJO_ENGAGEMENT_ID }}" \
+              -F "verified=false" \
+              -F "close_old_findings=false"
+            echo "== OWASP Semgrep scan uploaded =="
+          fi
+
 
 #  scan:
 #    name: Scan docker image with Trivy
