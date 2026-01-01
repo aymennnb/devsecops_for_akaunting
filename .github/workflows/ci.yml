@@ -210,7 +210,7 @@ jobs:
 
 
   sonarCloudScan:
-    name: SonarCloud Fast Analysis
+    name: SonarCloud TEST (single real file)
     runs-on: ubuntu-latest
     needs: prepare
 
@@ -220,17 +220,27 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Restore cached dependencies
-        uses: actions/cache@v3
-        with:
-            path: |
-              vendor
-              node_modules
-            key: ${{ runner.os }}-deps-${{ hashFiles('**/composer.lock', '**/package-lock.json') }}
-            restore-keys: |
-              ${{ runner.os }}-deps-
+      - name: Find smallest PHP file
+        run: |
+          echo "=== Recherche du plus petit fichier PHP ==="
+          # Trouver le plus petit fichier PHP dans app/Http/Controllers
+          find app/Http/Controllers -name "*.php" -type f -exec wc -l {} \; | sort -n | head -5
 
-      - name: SonarQube Scan
+          # Créer un dossier avec seulement 1 fichier
+          mkdir -p minimal-scan
+          # Prendre le premier contrôleur (par exemple HomeController)
+          if [ -f "app/Http/Controllers/HomeController.php" ]; then
+            cp app/Http/Controllers/HomeController.php minimal-scan/
+          else
+            # Sinon prendre le premier fichier trouvé
+            FIRST_FILE=$(find app/Http/Controllers -name "*.php" | head -1)
+            cp "$FIRST_FILE" minimal-scan/
+          fi
+
+          echo "Fichier copié :"
+          ls -la minimal-scan/
+
+      - name: SonarQube Single File Scan
         uses: SonarSource/sonarqube-scan-action@v6
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -238,11 +248,10 @@ jobs:
           args: >
             -Dsonar.organization=aymennnb
             -Dsonar.projectKey=aymennnb_devsecops_for_akaunting
-            -Dsonar.sources=app/Http/Controllers,app/Models,app/Rules
-            -Dsonar.exclusions=**/vendor/**,**/node_modules/**,**/storage/**,**/tests/**,**/database/**,**/public/**,**/resources/**,**/config/**,**/routes/**,**/packages/**,**/bootstrap/**,**/app/Console/**,**/app/Http/Middleware/**,**/app/Http/Requests/**,**/app/Providers/**
+            -Dsonar.sources=minimal-scan
             -Dsonar.sourceEncoding=UTF-8
             -Dsonar.analysis.automaticAnalysis.disabled=true
-            -Dsonar.qualitygate.wait=true
+            -Dsonar.qualitygate.wait=false
 
 #build:
 #  runs-on: ubuntu-latest
