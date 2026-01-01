@@ -230,17 +230,19 @@ jobs:
             restore-keys: |
               ${{ runner.os }}-deps-
 
-      - name: Run SonarCloud Scan (Quality Gate only)
-        uses: sonarsource/sonarcloud-github-action@master
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v6
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
           args: >
             -Dsonar.organization=aymennnb
             -Dsonar.projectKey=aymennnb_devsecops_for_akaunting
-            -Dsonar.sources=app,resources
-            -Dsonar.exclusions=**/vendor/**,**/node_modules/**,**/storage/**,**/tests/**,**/database/**,**/public/**
+            -Dsonar.sources=app,resources,config,routes
+            -Dsonar.exclusions=**/vendor/**,**/node_modules/**,**/storage/**,**/tests/**,**/database/**,**/public/**,**/.github/**
             -Dsonar.sourceEncoding=UTF-8
+            -Dsonar.php.version=8.3
+            -Dsonar.analysis.automaticAnalysis.disabled=true
             -Dsonar.qualitygate.wait=true
 
 #build:
