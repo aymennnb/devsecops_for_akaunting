@@ -229,10 +229,6 @@ jobs:
             cp -r app/Http/Controllers scan-target/
           fi
 
-          if [ -d "app/Models" ]; then
-            cp -r app/Models scan-target/
-          fi
-
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v6
         env:
