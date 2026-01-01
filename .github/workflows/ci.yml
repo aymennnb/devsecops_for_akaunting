@@ -220,11 +220,15 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Download dependencies artifact
-        uses: actions/download-artifact@v4
+      - name: Restore cached dependencies
+        uses: actions/cache@v3
         with:
-          name: dependencies-${{ github.sha }}
-          path: ./
+            path: |
+              vendor
+              node_modules
+            key: ${{ runner.os }}-deps-${{ hashFiles('**/composer.lock', '**/package-lock.json') }}
+            restore-keys: |
+              ${{ runner.os }}-deps-
 
       - name: Run SonarCloud Scan (Quality Gate only)
         uses: sonarsource/sonarcloud-github-action@master
