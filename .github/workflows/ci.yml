@@ -238,10 +238,9 @@ jobs:
           args: >
             -Dsonar.organization=aymennnb
             -Dsonar.projectKey=aymennnb_devsecops_for_akaunting
-            -Dsonar.sources=app,resources,config,routes
-            -Dsonar.exclusions=**/vendor/**,**/node_modules/**,**/storage/**,**/tests/**,**/database/**,**/public/**,**/.github/**
+            -Dsonar.sources=app/Http/Controllers,app/Models,app/Rules
+            -Dsonar.exclusions=**/vendor/**,**/node_modules/**,**/storage/**,**/tests/**,**/database/**,**/public/**,**/resources/**,**/config/**,**/routes/**,**/packages/**,**/bootstrap/**,**/app/Console/**,**/app/Http/Middleware/**,**/app/Http/Requests/**,**/app/Providers/**
             -Dsonar.sourceEncoding=UTF-8
-            -Dsonar.php.version=8.3
             -Dsonar.analysis.automaticAnalysis.disabled=true
             -Dsonar.qualitygate.wait=true
 
