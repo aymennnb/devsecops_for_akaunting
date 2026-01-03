@@ -476,7 +476,7 @@ jobs:
 
     env:
       DOCKER_IMAGE_NAME: ${{ vars.DOCKER_IMAGE_NAME }}
-      IMAGE_TAG: ${{ vars.DOCKER_IMAGE_NAME}}:${{ github.sha }}
+      IMAGE_TAG_COMMIT: ${{ vars.DOCKER_IMAGE_NAME}}:${{ github.sha }}
 
     steps:
       - name: Checkout code
@@ -489,7 +489,7 @@ jobs:
       - name: Download Docker image artifact
         uses: actions/download-artifact@v4
         with:
-          name: docker-image-${{ env.DOCKER_IMAGE_NAME }}-${{ env.IMAGE_TAG }}
+          name: docker-image-${{ env.DOCKER_IMAGE_NAME }}-${{ github.sha }}
           path: ./
 
       - name: Load Docker image
@@ -505,7 +505,7 @@ jobs:
           docker run -d \
             --name akaunting-app \
             -p 8080:80 \
-            ${{ env.DOCKER_IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+            ${{ env.IMAGE_TAG_COMMIT }}
           echo "== Container started =="
           sleep 10
           docker ps
