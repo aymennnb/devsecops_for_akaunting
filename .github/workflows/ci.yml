@@ -208,6 +208,69 @@ jobs:
             GitHub Actions/SAST Security/Reports/
           retention-days: 7
 
+  dependency-check:
+    name: OWASP Dependency Check
+    runs-on: ubuntu-latest
+    needs: prepare
+    continue-on-error: true
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create directories
+        run: |
+          mkdir -p "GitHub Actions/Dependency Check/Reports"
+
+      - name: Run OWASP Dependency Check
+        uses: dependency-check/Dependency-Check_Action@main
+        with:
+          path: "."
+          format: JSON
+          args: >
+            --enableExperimental
+            --enableRetired
+        continue-on-error: true
+
+      - name: Upload Dependency Check reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-check-reports-${{ github.sha }}
+          path: reports/
+          retention-days: 7
+
+  gitleaks:
+    name: Secret Detection with GitLeaks
+    runs-on: ubuntu-latest
+    needs: prepare
+    continue-on-error: true
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create directories
+        run: |
+          mkdir -p "GitHub Actions/GitLeaks/Reports"
+
+      - name: Run GitLeaks scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+
+      - name: Upload GitLeaks reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gitleaks-reports-${{ github.sha }}
+          path: |
+            leaks.json
+            leaks.sarif
+          retention-days: 7
+
   upload-to-defectdojo:
     name: Upload Semgrep Results to DefectDojo
     runs-on: ubuntu-latest
