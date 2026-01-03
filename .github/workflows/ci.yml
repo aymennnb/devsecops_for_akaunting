@@ -173,217 +173,218 @@ jobs:
   #           unit-report.xml
   #           feature-report.xml
 
-  semgrep-sast:
-    name: SAST Security with Semgrep
-    runs-on: ubuntu-latest
-    # needs: [prepare, run-tests]
-    needs: prepare
+  # semgrep-sast:
+  #   name: SAST Security with Semgrep
+  #   runs-on: ubuntu-latest
+  #   # needs: [prepare, run-tests]
+  #   needs: prepare
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
 
-      - name: Create directories
-        run: |
-          mkdir -p "GitHub Actions/SAST Security/Reports"
+  #     - name: Create directories
+  #       run: |
+  #         mkdir -p "GitHub Actions/SAST Security/Reports"
 
-      - name: Install Semgrep
-        run: |
-          python -m pip install semgrep
+  #     - name: Install Semgrep
+  #       run: |
+  #         python -m pip install semgrep
 
-      - name: Run Semgrep SAST
+  #     - name: Run Semgrep SAST
 
-        run: |
-          semgrep ci --config=auto --json > "GitHub Actions/SAST Security/Reports/semgrep-general.json" || true
-          echo "== Scan général terminé =="
-          semgrep ci --config=p/owasp-top-ten --json > "GitHub Actions/SAST Security/Reports/semgrep-owasp.json" || true
-          echo "== Scan OWASP terminé =="
+  #       run: |
+  #         semgrep ci --config=auto --json > "GitHub Actions/SAST Security/Reports/semgrep-general.json" || true
+  #         echo "== Scan général terminé =="
+  #         semgrep ci --config=p/owasp-top-ten --json > "GitHub Actions/SAST Security/Reports/semgrep-owasp.json" || true
+  #         echo "== Scan OWASP terminé =="
 
-      - name: Upload reports
-        uses: actions/upload-artifact@v4
-        with:
-          name: sast-reports-${{ github.sha }}
-          path: |
-            GitHub Actions/SAST Security/Reports/
-          retention-days: 7
+  #     - name: Upload reports
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: sast-reports-${{ github.sha }}
+  #         path: |
+  #           GitHub Actions/SAST Security/Reports/
+  #         retention-days: 7
 
-  dependency-check:
-    name: OWASP Dependency Check
-    runs-on: ubuntu-latest
-    needs: prepare
+  # dependency-check:
+  #   name: OWASP Dependency Check
+  #   runs-on: ubuntu-latest
+  #   needs: prepare
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
 
-      - name: Create directories
-        run: |
-          mkdir -p "GitHub Actions/Dependency Check/Reports"
+  #     - name: Create directories
+  #       run: |
+  #         mkdir -p "GitHub Actions/Dependency Check/Reports"
 
-      - name: Run OWASP Dependency Check
-        uses: dependency-check/Dependency-Check_Action@main
-        with:
-          path: "."
-          format: JSON
-          project: "Akaunting DevSecOps"
-          args: >
-            --enableExperimental
-            --enableRetired
+  #     - name: Run OWASP Dependency Check
+  #       uses: dependency-check/Dependency-Check_Action@main
+  #       with:
+  #         path: "."
+  #         format: JSON
+  #         project: "Akaunting DevSecOps"
+  #         args: >
+  #           --enableExperimental
+  #           --enableRetired
 
-      - name: Upload Dependency Check reports
-        uses: actions/upload-artifact@v4
-        with:
-          name: dependency-check-reports-${{ github.sha }}
-          path: reports/
-          retention-days: 7
+  #     - name: Upload Dependency Check reports
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: dependency-check-reports-${{ github.sha }}
+  #         path: reports/
+  #         retention-days: 7
 
-  gitleaks:
-    name: Secret Detection with GitLeaks
-    runs-on: ubuntu-latest
-    needs: prepare
+  # gitleaks:
+  #   name: Secret Detection with GitLeaks
+  #   runs-on: ubuntu-latest
+  #   needs: prepare
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
+  #       with:
+  #         fetch-depth: 0
 
-      - name: Create directories
-        run: |
-          mkdir -p "GitHub Actions/GitLeaks/Reports"
+  #     - name: Create directories
+  #       run: |
+  #         mkdir -p "GitHub Actions/GitLeaks/Reports"
 
-      - name: Run GitLeaks scan
-        uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #     - name: Run GitLeaks scan
+  #       uses: gitleaks/gitleaks-action@v2
+  #       env:
+  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload GitLeaks reports
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: gitleaks-reports-${{ github.sha }}
-          path: |
-            leaks.json
-            leaks.sarif
-          retention-days: 7
+  #     - name: Upload GitLeaks reports
+  #       if: always()
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: gitleaks-reports-${{ github.sha }}
+  #         path: |
+  #           leaks.json
+  #           leaks.sarif
+  #         retention-days: 7
 
-  upload-to-defectdojo:
-    name: Upload Security Scans to DefectDojo
-    runs-on: ubuntu-latest
-    needs: [semgrep-sast, dependency-check, gitleaks]
+  
+  # upload-to-defectdojo:
+  #   name: Upload Security Scans to DefectDojo
+  #   runs-on: ubuntu-latest
+  #   needs: build
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
 
-      - name: Download Semgrep artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: sast-reports-${{ github.sha }}
-          path: ./sast-reports
-        continue-on-error: true
+  #     - name: Download Semgrep artifacts
+  #       uses: actions/download-artifact@v4
+  #       with:
+  #         name: sast-reports-${{ github.sha }}
+  #         path: ./sast-reports
+  #       continue-on-error: true
 
-      - name: Download Dependency Check artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: dependency-check-reports-${{ github.sha }}
-          path: ./dependency-check-reports
-        continue-on-error: true
+  #     - name: Download Dependency Check artifacts
+  #       uses: actions/download-artifact@v4
+  #       with:
+  #         name: dependency-check-reports-${{ github.sha }}
+  #         path: ./dependency-check-reports
+  #       continue-on-error: true
 
-      - name: Download GitLeaks artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: gitleaks-reports-${{ github.sha }}
-          path: ./gitleaks-reports
-        continue-on-error: true
+  #     - name: Download GitLeaks artifacts
+  #       uses: actions/download-artifact@v4
+  #       with:
+  #         name: gitleaks-reports-${{ github.sha }}
+  #         path: ./gitleaks-reports
+  #       continue-on-error: true
 
-      - name: Upload Semgrep results to DefectDojo
+  #     - name: Upload Semgrep results to DefectDojo
 
-        env:
-          DEFECTDOJO_URL: ${{ vars.DEFECTDOJO_URL }}
-          DEFECTDOJO_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
-          DEFECTDOJO_ENGAGEMENT_ID: ${{ vars.DEFECTDOJO_ENGAGEMENT_ID }}
-        run: |
-          echo "== Uploading Semgrep results to DefectDojo =="
-          echo "DefectDojo URL: ${{ vars.DEFECTDOJO_URL }}"
+  #       env:
+  #         DEFECTDOJO_URL: ${{ vars.DEFECTDOJO_URL }}
+  #         DEFECTDOJO_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
+  #         DEFECTDOJO_ENGAGEMENT_ID: ${{ vars.DEFECTDOJO_ENGAGEMENT_ID }}
+  #       run: |
+  #         echo "== Uploading Semgrep results to DefectDojo =="
+  #         echo "DefectDojo URL: ${{ vars.DEFECTDOJO_URL }}"
 
-          SEMGREP_REPORT="sast-reports/semgrep-general.json"
+  #         SEMGREP_REPORT="sast-reports/semgrep-general.json"
 
-          if [ -f "$SEMGREP_REPORT" ]; then
-            echo "Found Semgrep report: $SEMGREP_REPORT"
+  #         if [ -f "$SEMGREP_REPORT" ]; then
+  #           echo "Found Semgrep report: $SEMGREP_REPORT"
             
-            curl -X POST \
-              "${{ vars.DEFECTDOJO_URL }}/api/v2/import-scan/" \
-              -H "Authorization: Token ${{ secrets.DEFECTDOJO_API_KEY }}" \
-              -H "Content-Type: multipart/form-data" \
-              -F "engagement=${{ vars.DEFECTDOJO_ENGAGEMENT_ID }}" \
-              -F "scan_type=Semgrep JSON Report" \
-              -F "file=@$SEMGREP_REPORT" \
-              -F "verified=true" \
-              -F "active=true"
+  #           curl -X POST \
+  #             "${{ vars.DEFECTDOJO_URL }}/api/v2/import-scan/" \
+  #             -H "Authorization: Token ${{ secrets.DEFECTDOJO_API_KEY }}" \
+  #             -H "Content-Type: multipart/form-data" \
+  #             -F "engagement=${{ vars.DEFECTDOJO_ENGAGEMENT_ID }}" \
+  #             -F "scan_type=Semgrep JSON Report" \
+  #             -F "file=@$SEMGREP_REPORT" \
+  #             -F "verified=true" \
+  #             -F "active=true"
             
-            echo "== Semgrep results uploaded successfully =="
-          else
-            echo "Semgrep report not found at $SEMGREP_REPORT"
-          fi
+  #           echo "== Semgrep results uploaded successfully =="
+  #         else
+  #           echo "Semgrep report not found at $SEMGREP_REPORT"
+  #         fi
 
-      - name: Upload Dependency Check results to DefectDojo
+  #     - name: Upload Dependency Check results to DefectDojo
 
-        env:
-          DEFECTDOJO_URL: ${{ vars.DEFECTDOJO_URL }}
-          DEFECTDOJO_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
-          DEFECTDOJO_ENGAGEMENT_ID: ${{ vars.DEFECTDOJO_ENGAGEMENT_ID }}
-        run: |
-          echo "== Uploading Dependency Check results to DefectDojo =="
+  #       env:
+  #         DEFECTDOJO_URL: ${{ vars.DEFECTDOJO_URL }}
+  #         DEFECTDOJO_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
+  #         DEFECTDOJO_ENGAGEMENT_ID: ${{ vars.DEFECTDOJO_ENGAGEMENT_ID }}
+  #       run: |
+  #         echo "== Uploading Dependency Check results to DefectDojo =="
 
-          DEPENDENCY_REPORT="dependency-check-reports/dependency-check-report.json"
+  #         DEPENDENCY_REPORT="dependency-check-reports/dependency-check-report.json"
 
-          if [ -f "$DEPENDENCY_REPORT" ]; then
-            echo "Found Dependency Check report: $DEPENDENCY_REPORT"
+  #         if [ -f "$DEPENDENCY_REPORT" ]; then
+  #           echo "Found Dependency Check report: $DEPENDENCY_REPORT"
             
-            curl -X POST \
-              "${{ vars.DEFECTDOJO_URL }}/api/v2/import-scan/" \
-              -H "Authorization: Token ${{ secrets.DEFECTDOJO_API_KEY }}" \
-              -H "Content-Type: multipart/form-data" \
-              -F "engagement=${{ vars.DEFECTDOJO_ENGAGEMENT_ID }}" \
-              -F "scan_type=Dependency Check JSON Report" \
-              -F "file=@$DEPENDENCY_REPORT" \
-              -F "verified=true" \
-              -F "active=true"
+  #           curl -X POST \
+  #             "${{ vars.DEFECTDOJO_URL }}/api/v2/import-scan/" \
+  #             -H "Authorization: Token ${{ secrets.DEFECTDOJO_API_KEY }}" \
+  #             -H "Content-Type: multipart/form-data" \
+  #             -F "engagement=${{ vars.DEFECTDOJO_ENGAGEMENT_ID }}" \
+  #             -F "scan_type=Dependency Check JSON Report" \
+  #             -F "file=@$DEPENDENCY_REPORT" \
+  #             -F "verified=true" \
+  #             -F "active=true"
             
-            echo "== Dependency Check results uploaded successfully =="
-          else
-            echo "Dependency Check report not found at $DEPENDENCY_REPORT"
-          fi
+  #           echo "== Dependency Check results uploaded successfully =="
+  #         else
+  #           echo "Dependency Check report not found at $DEPENDENCY_REPORT"
+  #         fi
 
-      - name: Upload GitLeaks results to DefectDojo
+  #     - name: Upload GitLeaks results to DefectDojo
 
-        env:
-          DEFECTDOJO_URL: ${{ vars.DEFECTDOJO_URL }}
-          DEFECTDOJO_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
-          DEFECTDOJO_ENGAGEMENT_ID: ${{ vars.DEFECTDOJO_ENGAGEMENT_ID }}
-        run: |
-          echo "== Uploading GitLeaks results to DefectDojo =="
+  #       env:
+  #         DEFECTDOJO_URL: ${{ vars.DEFECTDOJO_URL }}
+  #         DEFECTDOJO_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
+  #         DEFECTDOJO_ENGAGEMENT_ID: ${{ vars.DEFECTDOJO_ENGAGEMENT_ID }}
+  #       run: |
+  #         echo "== Uploading GitLeaks results to DefectDojo =="
 
-          GITLEAKS_REPORT="gitleaks-reports/leaks.json"
+  #         GITLEAKS_REPORT="gitleaks-reports/leaks.json"
 
-          if [ -f "$GITLEAKS_REPORT" ]; then
-            echo "Found GitLeaks report: $GITLEAKS_REPORT"
+  #         if [ -f "$GITLEAKS_REPORT" ]; then
+  #           echo "Found GitLeaks report: $GITLEAKS_REPORT"
             
-            curl -X POST \
-              "${{ vars.DEFECTDOJO_URL }}/api/v2/import-scan/" \
-              -H "Authorization: Token ${{ secrets.DEFECTDOJO_API_KEY }}" \
-              -H "Content-Type: multipart/form-data" \
-              -F "engagement=${{ vars.DEFECTDOJO_ENGAGEMENT_ID }}" \
-              -F "scan_type=Generic JSON Report" \
-              -F "file=@$GITLEAKS_REPORT" \
-              -F "verified=true" \
-              -F "active=true"
+  #           curl -X POST \
+  #             "${{ vars.DEFECTDOJO_URL }}/api/v2/import-scan/" \
+  #             -H "Authorization: Token ${{ secrets.DEFECTDOJO_API_KEY }}" \
+  #             -H "Content-Type: multipart/form-data" \
+  #             -F "engagement=${{ vars.DEFECTDOJO_ENGAGEMENT_ID }}" \
+  #             -F "scan_type=Generic JSON Report" \
+  #             -F "file=@$GITLEAKS_REPORT" \
+  #             -F "verified=true" \
+  #             -F "active=true"
             
-            echo "== GitLeaks results uploaded successfully =="
-          else
-            echo "GitLeaks report not found at $GITLEAKS_REPORT"
-          fi
+  #           echo "== GitLeaks results uploaded successfully =="
+  #         else
+  #           echo "GitLeaks report not found at $GITLEAKS_REPORT"
+  #         fi
 
   # sonarCloudScan:
   #   name: SonarCloud Fast Analysis
@@ -425,48 +426,132 @@ jobs:
   #           -Dsonar.analysis.automaticAnalysis.disabled=true
   #           -Dsonar.qualitygate.wait=false
 
-  # build:
-  #   name: Build Docker Image
-  #   runs-on: ubuntu-latest
-  #   needs: [semgrep-sast, sonarCloudScan, run-tests]
+  build:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+    # needs: [semgrep-sast, sonarCloudScan, run-tests]
 
-  #   env:
-  #     DOCKER_IMAGE_NAME: ${{ vars.DOCKER_IMAGE_NAME }}
-  #     IMAGE_TAG_COMMIT: ${{ vars.DOCKER_IMAGE_NAME}}:${{ github.sha }}
 
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v4
+    env:
+      DOCKER_IMAGE_NAME: ${{ vars.DOCKER_IMAGE_NAME }}
+      IMAGE_TAG_COMMIT: ${{ vars.DOCKER_IMAGE_NAME}}:${{ github.sha }}
 
-  #     - name: Set up Docker Buildx
-  #       uses: docker/setup-buildx-action@v3
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-  #     - name: Build Docker image
-  #       uses: docker/build-push-action@v6
-  #       with:
-  #         context: .
-  #         file: ./Dockerfile
-  #         push: false
-  #         load: true
-  #         tags: |
-  #           ${{ env.IMAGE_TAG_COMMIT }}
-  #         cache-from: type=gha
-  #         cache-to: type=gha,mode=max
-  #         platforms: linux/amd64
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-  #     - name: Save Docker image to tar file
-  #       run: |
-  #         echo "=== Sauvegarde de l'image Docker ==="
-  #         docker save ${{ env.IMAGE_TAG_COMMIT }} -o docker-image.tar
-  #         echo "== Image sauvegardée =="
-  #         ls -lh docker-image.tar
+      - name: Build Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: false
+          load: true
+          tags: |
+            ${{ env.IMAGE_TAG_COMMIT }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64
 
-  #     - name: Upload Docker image as artifact
-  #       uses: actions/upload-artifact@v4
-  #       with:
-  #         name: docker-image-${{ env.DOCKER_IMAGE_NAME }}-${{ github.sha }}
-  #         path: docker-image.tar
-  #         retention-days: 1
+      - name: Save Docker image to tar file
+        run: |
+          echo "=== Sauvegarde de l'image Docker ==="
+          docker save ${{ env.IMAGE_TAG_COMMIT }} -o docker-image.tar
+          echo "== Image sauvegardée =="
+          ls -lh docker-image.tar
+
+      - name: Upload Docker image as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image-${{ env.DOCKER_IMAGE_NAME }}-${{ github.sha }}
+          path: docker-image.tar
+          retention-days: 1
+
+
+  owasp-zap-dast:
+    name: DAST Security with OWASP ZAP
+    runs-on: ubuntu-latest
+    needs: build
+    continue-on-error: true
+
+    env:
+      DOCKER_IMAGE_NAME: ${{ vars.DOCKER_IMAGE_NAME }}
+      IMAGE_TAG: ${{ vars.DOCKER_IMAGE_NAME}}:${{ github.sha }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create directories
+        run: |
+          mkdir -p "GitHub Actions/DAST Security/Reports"
+
+      - name: Download Docker image artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image-${{ env.DOCKER_IMAGE_NAME }}-${{ env.IMAGE_TAG }}
+          path: ./
+
+      - name: Load Docker image
+        run: |
+          echo "=== Loading Docker image ==="
+          docker load -i docker-image.tar
+          echo "== Docker image loaded =="
+          docker images | grep ${{ env.DOCKER_IMAGE_NAME }}
+
+      - name: Start Docker container
+        run: |
+          echo "=== Starting Docker container ==="
+          docker run -d \
+            --name akaunting-app \
+            -p 8080:80 \
+            ${{ env.DOCKER_IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+          echo "== Container started =="
+          sleep 10
+          docker ps
+
+      - name: Wait for application to be ready
+        run: |
+          echo "=== Waiting for application to be ready ==="
+          for i in {1..30}; do
+            if curl -s http://localhost:8080 > /dev/null; then
+              echo "Application is ready!"
+              exit 0
+            fi
+            echo "Waiting... (attempt $i/30)"
+            sleep 2
+          done
+          echo "Application did not respond in time"
+          exit 1
+
+      - name: Run OWASP ZAP scan
+        uses: zaproxy/action-full-scan@v0.4.1
+        with:
+          target: "http://localhost:8080"
+          rules_file_name: ".zap/rules.tsv"
+          cmd_options: "-a"
+        continue-on-error: true
+
+      - name: Upload ZAP scan results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-scan-results-${{ github.sha }}
+          path: |
+            report_md.md
+            report_html.html
+          retention-days: 7
+
+      - name: Stop Docker container
+        if: always()
+        run: |
+          echo "=== Stopping Docker container ==="
+          docker stop akaunting-app || true
+          docker rm akaunting-app || true
+
 
   # scan:
   #   name: Scan Docker Image with Trivy
