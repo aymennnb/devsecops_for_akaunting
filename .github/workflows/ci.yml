@@ -232,6 +232,7 @@ jobs:
           DEFECTDOJO_ENGAGEMENT_ID: ${{ secrets.DEFECTDOJO_ENGAGEMENT_ID }}
         run: |
           echo "== Uploading Semgrep results to DefectDojo =="
+          echo "DefectDojo URL: ${{ env.DEFECTDOJO_URL }}"
 
           SEMGREP_REPORT="sast-reports/semgrep-general.json"
 
@@ -239,10 +240,10 @@ jobs:
             echo "Found Semgrep report: $SEMGREP_REPORT"
             
             curl -X POST \
-              "${{ env.DEFECTDOJO_URL }}/api/v2/import-scan/" \
-              -H "Authorization: Token ${{ env.DEFECTDOJO_API_KEY }}" \
+              "${{ secrets.DEFECTDOJO_URL }}/api/v2/import-scan/" \
+              -H "Authorization: Token ${{ secrets.DEFECTDOJO_API_KEY }}" \
               -H "Content-Type: multipart/form-data" \
-              -F "engagement=${{ env.DEFECTDOJO_ENGAGEMENT_ID }}" \
+              -F "engagement=${{ secrets.DEFECTDOJO_ENGAGEMENT_ID }}" \
               -F "scan_type=Semgrep JSON Report" \
               -F "file=@$SEMGREP_REPORT" \
               -F "verified=true" \
