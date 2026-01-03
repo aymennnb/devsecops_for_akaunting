@@ -430,6 +430,7 @@ jobs:
     name: Build Docker Image
     runs-on: ubuntu-latest
     # needs: [semgrep-sast, sonarCloudScan, run-tests]
+    needs: prepare
 
 
     env:
