@@ -228,6 +228,7 @@ jobs:
           path: "."
           format: JSON
           args: >
+            --project "Akaunting DevSecOps"
             --enableExperimental
             --enableRetired
         
