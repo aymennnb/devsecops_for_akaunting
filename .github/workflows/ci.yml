@@ -267,7 +267,6 @@ jobs:
   #           leaks.sarif
   #         retention-days: 7
 
-  
   # upload-to-defectdojo:
   #   name: Upload Security Scans to DefectDojo
   #   runs-on: ubuntu-latest
@@ -312,7 +311,7 @@ jobs:
 
   #         if [ -f "$SEMGREP_REPORT" ]; then
   #           echo "Found Semgrep report: $SEMGREP_REPORT"
-            
+
   #           curl -X POST \
   #             "${{ vars.DEFECTDOJO_URL }}/api/v2/import-scan/" \
   #             -H "Authorization: Token ${{ secrets.DEFECTDOJO_API_KEY }}" \
@@ -322,7 +321,7 @@ jobs:
   #             -F "file=@$SEMGREP_REPORT" \
   #             -F "verified=true" \
   #             -F "active=true"
-            
+
   #           echo "== Semgrep results uploaded successfully =="
   #         else
   #           echo "Semgrep report not found at $SEMGREP_REPORT"
@@ -341,7 +340,7 @@ jobs:
 
   #         if [ -f "$DEPENDENCY_REPORT" ]; then
   #           echo "Found Dependency Check report: $DEPENDENCY_REPORT"
-            
+
   #           curl -X POST \
   #             "${{ vars.DEFECTDOJO_URL }}/api/v2/import-scan/" \
   #             -H "Authorization: Token ${{ secrets.DEFECTDOJO_API_KEY }}" \
@@ -351,7 +350,7 @@ jobs:
   #             -F "file=@$DEPENDENCY_REPORT" \
   #             -F "verified=true" \
   #             -F "active=true"
-            
+
   #           echo "== Dependency Check results uploaded successfully =="
   #         else
   #           echo "Dependency Check report not found at $DEPENDENCY_REPORT"
@@ -370,7 +369,7 @@ jobs:
 
   #         if [ -f "$GITLEAKS_REPORT" ]; then
   #           echo "Found GitLeaks report: $GITLEAKS_REPORT"
-            
+
   #           curl -X POST \
   #             "${{ vars.DEFECTDOJO_URL }}/api/v2/import-scan/" \
   #             -H "Authorization: Token ${{ secrets.DEFECTDOJO_API_KEY }}" \
@@ -380,7 +379,7 @@ jobs:
   #             -F "file=@$GITLEAKS_REPORT" \
   #             -F "verified=true" \
   #             -F "active=true"
-            
+
   #           echo "== GitLeaks results uploaded successfully =="
   #         else
   #           echo "GitLeaks report not found at $GITLEAKS_REPORT"
@@ -469,7 +468,6 @@ jobs:
           path: docker-image.tar
           retention-days: 1
 
-
   owasp-zap-dast:
     name: DAST Security with OWASP ZAP
     runs-on: ubuntu-latest
@@ -527,7 +525,7 @@ jobs:
           exit 1
 
       - name: Run OWASP ZAP scan
-        uses: zaproxy/action-full-scan@v0.4.1
+        uses: zaproxy/action-full-scan@v0.7.0
         with:
           target: "http://localhost:8080"
           rules_file_name: ".zap/rules.tsv"
@@ -550,7 +548,6 @@ jobs:
           echo "=== Stopping Docker container ==="
           docker stop akaunting-app || true
           docker rm akaunting-app || true
-
 
   # scan:
   #   name: Scan Docker Image with Trivy
