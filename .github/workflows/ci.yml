@@ -281,18 +281,21 @@ jobs:
         with:
           name: sast-reports-${{ github.sha }}
           path: ./sast-reports
+        continue-on-error: true
 
       - name: Download Dependency Check artifacts
         uses: actions/download-artifact@v4
         with:
           name: dependency-check-reports-${{ github.sha }}
           path: ./dependency-check-reports
+        continue-on-error: true
 
       - name: Download GitLeaks artifacts
         uses: actions/download-artifact@v4
         with:
           name: gitleaks-reports-${{ github.sha }}
           path: ./gitleaks-reports
+        continue-on-error: true
 
       - name: Upload Semgrep results to DefectDojo
 
