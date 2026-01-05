@@ -50,7 +50,12 @@ jobs:
 
       - name: Terraform Refresh
         working-directory: ./terraform
-        run: terraform refresh -auto-approve
+        run: terraform refresh
+        continue-on-error: true
+
+      - name: Import Existing IAM Role
+        working-directory: ./terraform
+        run: terraform import aws_iam_role.ecs_task_execution_role juice-shop-ecs-task-execution
         continue-on-error: true
 
       - name: Terraform Validate
@@ -113,7 +118,12 @@ jobs:
 
       - name: Terraform Refresh
         working-directory: ./terraform
-        run: terraform refresh -auto-approve
+        run: terraform refresh
+        continue-on-error: true
+
+      - name: Import Existing IAM Role
+        working-directory: ./terraform
+        run: terraform import aws_iam_role.ecs_task_execution_role juice-shop-ecs-task-execution
         continue-on-error: true
 
       - name: Terraform Apply
