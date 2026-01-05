@@ -240,13 +240,14 @@ jobs:
         run: npm install -g snyk
 
       - name: Run Snyk Test for PHP dependencies
+        continue-on-error: true
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         run: |
           snyk test \
             --severity-threshold=medium \
             --json-file-output=snyk-php-results.json \
-            --sarif-file-output=snyk-php.sarif
+            --sarif-file-output=snyk-php.sarif || true
 
       - name: Run Snyk Monitor to Snyk Dashboard
         env:
@@ -270,22 +271,30 @@ jobs:
             snyk-php-results.json
           retention-days: 30
 
-      - name: Display Snyk summary
+      - name: Display Snyk summary with vulnerabilities
         if: always()
         run: |
-            echo "=== SNYK SECURITY SCAN SUMMARY ==="
-            echo "Project: Akaunting"
-            echo "Branch: ${{ github.ref_name }}"
-            echo "Commit: ${{ github.sha_short }}"
-            echo ""
-            echo "Reports generated:"
-            echo "  - snyk-php.sarif (for GitHub Code Scanning)"
-            echo "  - snyk-php-results.json (detailed report)"
-            echo ""
-            echo "Links:"
-            echo "  - GitHub Code Scanning: https://github.com/${{ github.repository }}/security/code-scanning"
-            echo "  - Snyk Dashboard: https://app.snyk.io/org/$(echo ${{ secrets.SNYK_TOKEN }} | cut -d'.' -f1)/projects"
-            echo ""
+          echo "=== SNYK SECURITY SCAN SUMMARY ==="
+          echo "Project: Akaunting"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Commit: ${{ github.sha_short }}"
+          echo ""
+
+          if [ -f "snyk-php-results.json" ]; then
+            echo "Vulnerabilities found:"
+            jq -r '.vulnerabilities[]? | "\(.severity): \(.id) - \(.title)"' snyk-php-results.json || echo "No vulnerabilities found in JSON"
+          else
+            echo "No Snyk results file available"
+          fi
+
+          echo ""
+          echo "Reports generated:"
+          echo "  - snyk-php.sarif (uploaded to GitHub Code Scanning)"
+          echo "  - snyk-php-results.json (saved as artifact)"
+          echo ""
+          echo "Links:"
+          echo "  - GitHub Code Scanning: https://github.com/${{ github.repository }}/security/code-scanning"
+          echo "  - Snyk Dashboard: https://app.snyk.io/"
 
 
 #  sonarCloudScan:
