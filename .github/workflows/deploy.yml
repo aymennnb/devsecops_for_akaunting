@@ -10,17 +10,6 @@ on:
     paths:
       - "terraform/**"
       - ".github/workflows/deploy.yml"
-  workflow_dispatch:
-    inputs:
-      terraform_action:
-        description: "Terraform action to perform"
-        required: true
-        default: "plan"
-        type: choice
-        options:
-          - plan
-          - apply
-          - destroy
 
 env:
   AWS_REGION: us-east-1
@@ -148,52 +137,6 @@ jobs:
               repo: context.repo.repo,
               body: `## Terraform Apply\n\nDeployment completed. Check the logs for details.`
             });
-
-  terraform-manual-action:
-    name: Terraform Manual Action
-    runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch'
-    environment:
-      name: production
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: ${{ env.TERRAFORM_VERSION }}
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Terraform Init
-        working-directory: ./terraform
-        run: terraform init
-
-      - name: Terraform Validate
-        working-directory: ./terraform
-        run: terraform validate
-
-      - name: Terraform Plan
-        working-directory: ./terraform
-        if: ${{ github.event.inputs.terraform_action == 'plan' }}
-        run: terraform plan -lock=true
-
-      - name: Terraform Apply
-        working-directory: ./terraform
-        if: ${{ github.event.inputs.terraform_action == 'apply' }}
-        run: terraform apply -auto-approve
-
-      - name: Terraform Destroy
-        working-directory: ./terraform
-        if: ${{ github.event.inputs.terraform_action == 'destroy' }}
-        run: terraform destroy -auto-approve
 
   security-scan:
     name: Terraform Security Scan
