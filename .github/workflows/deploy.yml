@@ -70,7 +70,7 @@ jobs:
         continue-on-error: true
 
       - name: Upload Terraform Plan
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: terraform-plan
           path: terraform/tfplan
@@ -118,7 +118,7 @@ jobs:
         run: terraform init
 
       - name: Download Terraform Plan
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: terraform-plan
           path: terraform/
@@ -129,7 +129,7 @@ jobs:
 
       - name: Upload State File
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: terraform-state
           path: terraform/terraform.tfstate*
@@ -224,7 +224,7 @@ jobs:
           output_file_path: reports/checkov.sarif
 
       - name: Upload SARIF Report
-        uses: github/codeql-action/upload-sarif@v2
+        uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
           sarif_file: reports/checkov.sarif
