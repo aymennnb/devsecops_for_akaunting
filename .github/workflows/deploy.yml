@@ -116,6 +116,14 @@ jobs:
         run: terraform refresh
         continue-on-error: true
 
+      - name: Import Existing ECS Service
+        working-directory: ./terraform
+        run: terraform import aws_ecs_service.juice_shop juice-shop-cluster/juice-shop-service
+        continue-on-error: true
+      - name: Import Existing ECS Task Definition
+        working-directory: ./terraform
+        run: terraform import aws_ecs_task_definition.juice_shop juice-shop-task
+        continue-on-error: true
       - name: Terraform Apply
         working-directory: ./terraform
         run: terraform apply -auto-approve
