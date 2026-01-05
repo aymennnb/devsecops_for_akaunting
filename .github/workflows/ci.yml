@@ -195,6 +195,98 @@ jobs:
 #            GitHub Actions/SAST Security/Reports/
 #          retention-days: 7
 
+  snyk-sast:
+    name: Snyk Security Scan & Monitoring
+    runs-on: ubuntu-latest
+    needs: prepare
+    permissions:
+      security-events: write
+      contents: read
+      actions: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP for Snyk
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+
+      - name: Setup Node.js for Snyk CLI
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Restore Composer dependencies from cache
+        uses: actions/cache@v3
+        id: cache-composer
+        with:
+          path: vendor
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-composer-
+
+      - name: Restore npm dependencies from cache
+        uses: actions/cache@v3
+        id: cache-npm
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-
+
+      - name: Install Snyk CLI globally
+        run: npm install -g snyk
+
+      - name: Run Snyk Test for PHP dependencies
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: |
+          snyk test \
+            --severity-threshold=medium \
+            --json-file-output=snyk-php-results.json \
+            --sarif-file-output=snyk-php.sarif
+
+      - name: Run Snyk Monitor to Snyk Dashboard
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: |
+          snyk monitor \
+            --project-name="Akaunting - ${{ github.repository }}" \
+            --remote-repo-url="https://github.com/${{ github.repository }}"
+
+      - name: Upload SARIF to GitHub Code Scanning
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: snyk-php.sarif
+
+      - name: Upload Snyk reports as artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: snyk-security-reports-${{ github.sha }}
+          path: |
+            snyk-php.sarif
+            snyk-php-results.json
+          retention-days: 30
+
+      - name: Display Snyk summary
+        if: always()
+        run: |
+            echo "=== SNYK SECURITY SCAN SUMMARY ==="
+            echo "Project: Akaunting"
+            echo "Branch: ${{ github.ref_name }}"
+            echo "Commit: ${{ github.sha_short }}"
+            echo ""
+            echo "Reports generated:"
+            echo "  - snyk-php.sarif (for GitHub Code Scanning)"
+            echo "  - snyk-php-results.json (detailed report)"
+            echo ""
+            echo "Links:"
+            echo "  - GitHub Code Scanning: https://github.com/${{ github.repository }}/security/code-scanning"
+            echo "  - Snyk Dashboard: https://app.snyk.io/org/$(echo ${{ secrets.SNYK_TOKEN }} | cut -d'.' -f1)/projects"
+            echo ""
+
 
 #  sonarCloudScan:
 #    name: SonarCloud Fast Analysis
