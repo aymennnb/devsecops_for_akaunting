@@ -4,19 +4,16 @@ permissions:
   contents: read
   actions: read
 
-# on:
-#   push:
-    # branches: [main]
-    # paths:
-    #   - "terraform/**"
-    #   - ".github/workflows/deploy.yml"
-
-
 on:
-  workflow_run:
-    workflows: ["CI"]
-    types:
-      - completed
+  push:
+    branches: [main]
+    paths:
+      - "terraform/**"
+      - ".github/workflows/deploy.yml"
+#   workflow_run:
+#     workflows: ["CI"]
+#     types:
+#       - completed
 
 env:
   AWS_REGION: us-east-1
