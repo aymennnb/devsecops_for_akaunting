@@ -103,7 +103,6 @@ jobs:
           php artisan migrate --force
           echo "== Base de données configurée =="
 
-
 #  run-tests:
 #    name: Unit & Feature Tests
 #    runs-on: ubuntu-latest
