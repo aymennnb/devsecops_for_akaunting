@@ -1,10 +1,10 @@
 name: Akaunting DevSecOps CI/CD
 
-#permissions:
-#  contents: read
-#  actions: read
-#  checks: write
-#  security-events: write
+permissions:
+  contents: read
+  actions: read
+  checks: write
+  security-events: write
 
 env:
   MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
@@ -236,7 +236,7 @@ jobs:
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
-          args: --severity-threshold=medium
+          args: --severity-threshold=high
           command: monitor
 
 #  sonarCloudScan:
