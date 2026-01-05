@@ -145,7 +145,6 @@ jobs:
       - name: Execute tests
         run: php artisan test --parallel
 
-
 #  run-tests:
 #    name: Unit & Feature Tests
 #    runs-on: ubuntu-latest
