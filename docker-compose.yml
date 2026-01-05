@@ -27,8 +27,8 @@ services:
       DB_HOST: mysql
       DB_PORT: 3306
       DB_NAME: akaunting
-      DB_USERNAME: akaunting
-      DB_PASSWORD: akauntingpass
+      DB_USERNAME: ak_user
+      DB_PASSWORD: ak_pass
       DB_PREFIX: akon_
     ports:
       - "8000:80"
