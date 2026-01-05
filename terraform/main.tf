@@ -100,6 +100,8 @@ resource "aws_ecs_service" "juice_shop" {
   desired_count   = 1
   launch_type     = "FARGATE"
 
+  depends_on = [aws_iam_role_policy_attachment.ecs_task_execution_policy]
+
   network_configuration {
     subnets          = [aws_subnet.public.id]
     security_groups  = [aws_security_group.ecs_sg.id]
