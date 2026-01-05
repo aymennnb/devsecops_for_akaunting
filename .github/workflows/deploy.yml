@@ -47,6 +47,11 @@ jobs:
         working-directory: ./terraform
         run: terraform init
 
+      - name: Terraform Refresh
+        working-directory: ./terraform
+        run: terraform refresh -auto-approve
+        continue-on-error: true
+
       - name: Terraform Validate
         working-directory: ./terraform
         run: terraform validate
@@ -111,6 +116,11 @@ jobs:
       - name: Terraform Init
         working-directory: ./terraform
         run: terraform init
+
+      - name: Terraform Refresh
+        working-directory: ./terraform
+        run: terraform refresh -auto-approve
+        continue-on-error: true
 
       - name: Download Terraform Plan
         uses: actions/download-artifact@v4
