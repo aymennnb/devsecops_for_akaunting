@@ -240,6 +240,7 @@ jobs:
         run: npm install -g snyk
 
       - name: Run Snyk Test for PHP dependencies
+        id: snyk-test
         continue-on-error: true
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
@@ -249,7 +250,20 @@ jobs:
             --json-file-output=snyk-php-results.json \
             --sarif-file-output=snyk-php.sarif || true
 
+      - name: Verify SARIF file exists
+        id: verify-sarif
+        run: |
+          if [ -f "snyk-php.sarif" ]; then
+            echo "SARIF file exists"
+            echo "File size: $(wc -l < snyk-php.sarif) lines"
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "SARIF file not found"
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Run Snyk Monitor to Snyk Dashboard
+        if: steps.verify-sarif.outputs.exists == 'true'
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         run: |
@@ -257,12 +271,14 @@ jobs:
             --project-name="Akaunting - ${{ github.repository }}" \
             --remote-repo-url="https://github.com/${{ github.repository }}"
 
-      - name: Upload SARIF to GitHub Code Scanning
-        uses: github/codeql-action/upload-sarif@v3
+      - name: Upload SARIF to GitHub Code Scanning (v4)
+        if: steps.verify-sarif.outputs.exists == 'true'
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: snyk-php.sarif
 
       - name: Upload Snyk reports as artifacts
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: snyk-security-reports-${{ github.sha }}
@@ -271,7 +287,7 @@ jobs:
             snyk-php-results.json
           retention-days: 30
 
-      - name: Display Snyk summary with vulnerabilities
+      - name: Display Snyk summary
         if: always()
         run: |
           echo "=== SNYK SECURITY SCAN SUMMARY ==="
@@ -287,10 +303,6 @@ jobs:
             echo "No Snyk results file available"
           fi
 
-          echo ""
-          echo "Reports generated:"
-          echo "  - snyk-php.sarif (uploaded to GitHub Code Scanning)"
-          echo "  - snyk-php-results.json (saved as artifact)"
           echo ""
           echo "Links:"
           echo "  - GitHub Code Scanning: https://github.com/${{ github.repository }}/security/code-scanning"
