@@ -6,10 +6,6 @@ env:
   MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
   APP_ENV: testing
 
-permissions:
-  contents: read
-  security-events: write
-
 on:
   push:
     branches: [main]
@@ -34,7 +30,6 @@ jobs:
           --health-interval=10s
           --health-timeout=5s
           --health-retries=3
-
     steps:
       - name: Checkout du code
         uses: actions/checkout@v4
@@ -42,12 +37,12 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: "8.3"
+          php-version: '8.3'
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "18"
+          node-version: '18'
 
       - name: Cache Composer dependencies
         uses: actions/cache@v3
@@ -56,7 +51,6 @@ jobs:
           key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
           restore-keys: |
             ${{ runner.os }}-composer-
-
       - name: Cache npm dependencies
         uses: actions/cache@v3
         with:
@@ -64,7 +58,6 @@ jobs:
           key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-npm-
-
       - name: Install Composer dependencies
         run: composer install --no-interaction --prefer-dist --no-scripts
 
@@ -74,10 +67,8 @@ jobs:
       - name: Setup application environment
         run: |
           echo "== Configuration de l'environnement... =="
-
           cp .env.example .env
           php artisan key:generate
-
           sed -i "s/APP_ENV=.*/APP_ENV=${{ env.APP_ENV }}/" .env
           sed -i "s/APP_DEBUG=.*/APP_DEBUG=true/" .env
           sed -i "s/DB_HOST=.*/DB_HOST=127.0.0.1/" .env
@@ -85,10 +76,8 @@ jobs:
           sed -i "s/DB_DATABASE=.*/DB_DATABASE=${{ env.MYSQL_DATABASE }}/" .env
           sed -i "s/DB_USERNAME=.*/DB_USERNAME=${{ env.MYSQL_USER }}/" .env
           sed -i "s/DB_PASSWORD=.*/DB_PASSWORD=${{ env.MYSQL_PASSWORD }}/" .env
-
           mkdir -p storage/framework/{sessions,views,cache}
           mkdir -p bootstrap/cache
-
       - name: Wait for MySQL to be ready
         env:
           MYSQL_PWD: ${{ env.MYSQL_PASSWORD }}
@@ -99,7 +88,6 @@ jobs:
             sleep 2
           done
           echo "== MySQL est prêt =="
-
       - name: Setup Database
         env:
           MYSQL_PWD: ${{ env.MYSQL_PASSWORD }}
@@ -109,546 +97,270 @@ jobs:
           php artisan migrate --force
           echo "== Base de données configurée =="
 
-  # run-tests:
-  #   name: Unit & Feature Tests
-  #   runs-on: ubuntu-latest
-  #   needs: prepare
-  #   continue-on-error: true
 
-  #   services:
-  #     mysql:
-  #       image: mysql:8.0
-  #       env:
-  #         MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
-  #         MYSQL_USER: ${{ secrets.MYSQL_USER }}
-  #         MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
-  #         MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
-
-  #   steps:
-  #     - uses: actions/checkout@v4
-
-  #     - name: Setup PHP
-  #       uses: shivammathur/setup-php@v2
-  #       with:
-  #         php-version: "8.3"
-
-  #     - uses: actions/cache@v3
-  #       with:
-  #         path: vendor
-  #         key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
-
-  #     - name: Check dependencies
-  #       run: |
-  #         if [ ! -d "vendor" ]; then
-  #           echo "== vendor non trouvé, installation... =="
-  #           composer install --no-scripts
-  #         else
-  #           echo "== Utilisation du cache Composer =="
-  #         fi
-
-  #     - name: Setup test environment
-  #       run: |
-  #         echo "== Configuration de l'environnement de test... =="
-  #         cp .env.example .env.testing
-  #         php artisan key:generate --env=testing
-  #         sed -i "s/DB_HOST=.*/DB_HOST=127.0.0.1/" .env.testing
-  #         sed -i "s/DB_DATABASE=.*/DB_DATABASE=${{ secrets.MYSQL_DATABASE }}/" .env.testing
-
-  #     - name: Run unit tests
-  #       run: |
-  #         echo "== Lancement des tests unitaires... =="
-  #         vendor/bin/phpunit --testsuite Unit --log-junit unit-report.xml
-  #         echo "== Tests unitaires terminés =="
-  #       continue-on-error: true
-
-  #     - name: Run feature tests
-  #       run: |
-  #         echo "== Lancement des tests fonctionnels... =="
-  #         vendor/bin/phpunit --testsuite Feature --log-junit feature-report.xml
-  #         echo "== Tests fonctionnels terminés =="
-  #       continue-on-error: true
-
-  #     - name: Upload test reports
-  #       if: always()
-  #       uses: actions/upload-artifact@v4
-  #       with:
-  #         name: test-reports-${{ github.run_id }}
-  #         path: |
-  #           unit-report.xml
-  #           feature-report.xml
-
-  # semgrep-sast:
-  #   name: SAST Security with Semgrep
-  #   runs-on: ubuntu-latest
-  #   # needs: [prepare, run-tests]
-  #   needs: prepare
-
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v4
-
-  #     - name: Create directories
-  #       run: |
-  #         mkdir -p "GitHub Actions/SAST Security/Reports"
-
-  #     - name: Install Semgrep
-  #       run: |
-  #         python -m pip install semgrep
-
-  #     - name: Run Semgrep SAST
-
-  #       run: |
-  #         semgrep ci --config=auto --json > "GitHub Actions/SAST Security/Reports/semgrep-general.json" || true
-  #         echo "== Scan général terminé =="
-  #         semgrep ci --config=p/owasp-top-ten --json > "GitHub Actions/SAST Security/Reports/semgrep-owasp.json" || true
-  #         echo "== Scan OWASP terminé =="
-
-  #     - name: Upload reports
-  #       uses: actions/upload-artifact@v4
-  #       with:
-  #         name: sast-reports-${{ github.sha }}
-  #         path: |
-  #           GitHub Actions/SAST Security/Reports/
-  #         retention-days: 7
-
-  # dependency-check:
-  #   name: OWASP Dependency Check
-  #   runs-on: ubuntu-latest
-  #   needs: prepare
-
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v4
-
-  #     - name: Create directories
-  #       run: |
-  #         mkdir -p "GitHub Actions/Dependency Check/Reports"
-
-  #     - name: Run OWASP Dependency Check
-  #       uses: dependency-check/Dependency-Check_Action@main
-  #       with:
-  #         path: "."
-  #         format: JSON
-  #         project: "Akaunting DevSecOps"
-  #         args: >
-  #           --enableExperimental
-  #           --enableRetired
-
-  #     - name: Upload Dependency Check reports
-  #       uses: actions/upload-artifact@v4
-  #       with:
-  #         name: dependency-check-reports-${{ github.sha }}
-  #         path: reports/
-  #         retention-days: 7
-
-  # gitleaks:
-  #   name: Secret Detection with GitLeaks
-  #   runs-on: ubuntu-latest
-  #   needs: prepare
-
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v4
-  #       with:
-  #         fetch-depth: 0
-
-  #     - name: Create directories
-  #       run: |
-  #         mkdir -p "GitHub Actions/GitLeaks/Reports"
-
-  #     - name: Run GitLeaks scan
-  #       uses: gitleaks/gitleaks-action@v2
-  #       env:
-  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  #     - name: Upload GitLeaks reports
-  #       if: always()
-  #       uses: actions/upload-artifact@v4
-  #       with:
-  #         name: gitleaks-reports-${{ github.sha }}
-  #         path: |
-  #           leaks.json
-  #           leaks.sarif
-  #         retention-days: 7
-
-  # upload-to-defectdojo:
-  #   name: Upload Security Scans to DefectDojo
-  #   runs-on: ubuntu-latest
-  #   needs: build
-
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v4
-
-  #     - name: Download Semgrep artifacts
-  #       uses: actions/download-artifact@v4
-  #       with:
-  #         name: sast-reports-${{ github.sha }}
-  #         path: ./sast-reports
-  #       continue-on-error: true
-
-  #     - name: Download Dependency Check artifacts
-  #       uses: actions/download-artifact@v4
-  #       with:
-  #         name: dependency-check-reports-${{ github.sha }}
-  #         path: ./dependency-check-reports
-  #       continue-on-error: true
-
-  #     - name: Download GitLeaks artifacts
-  #       uses: actions/download-artifact@v4
-  #       with:
-  #         name: gitleaks-reports-${{ github.sha }}
-  #         path: ./gitleaks-reports
-  #       continue-on-error: true
-
-  #     - name: Upload Semgrep results to DefectDojo
-
-  #       env:
-  #         DEFECTDOJO_URL: ${{ vars.DEFECTDOJO_URL }}
-  #         DEFECTDOJO_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
-  #         DEFECTDOJO_ENGAGEMENT_ID: ${{ vars.DEFECTDOJO_ENGAGEMENT_ID }}
-  #       run: |
-  #         echo "== Uploading Semgrep results to DefectDojo =="
-  #         echo "DefectDojo URL: ${{ vars.DEFECTDOJO_URL }}"
-
-  #         SEMGREP_REPORT="sast-reports/semgrep-general.json"
-
-  #         if [ -f "$SEMGREP_REPORT" ]; then
-  #           echo "Found Semgrep report: $SEMGREP_REPORT"
-
-  #           curl -X POST \
-  #             "${{ vars.DEFECTDOJO_URL }}/api/v2/import-scan/" \
-  #             -H "Authorization: Token ${{ secrets.DEFECTDOJO_API_KEY }}" \
-  #             -H "Content-Type: multipart/form-data" \
-  #             -F "engagement=${{ vars.DEFECTDOJO_ENGAGEMENT_ID }}" \
-  #             -F "scan_type=Semgrep JSON Report" \
-  #             -F "file=@$SEMGREP_REPORT" \
-  #             -F "verified=true" \
-  #             -F "active=true"
-
-  #           echo "== Semgrep results uploaded successfully =="
-  #         else
-  #           echo "Semgrep report not found at $SEMGREP_REPORT"
-  #         fi
-
-  #     - name: Upload Dependency Check results to DefectDojo
-
-  #       env:
-  #         DEFECTDOJO_URL: ${{ vars.DEFECTDOJO_URL }}
-  #         DEFECTDOJO_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
-  #         DEFECTDOJO_ENGAGEMENT_ID: ${{ vars.DEFECTDOJO_ENGAGEMENT_ID }}
-  #       run: |
-  #         echo "== Uploading Dependency Check results to DefectDojo =="
-
-  #         DEPENDENCY_REPORT="dependency-check-reports/dependency-check-report.json"
-
-  #         if [ -f "$DEPENDENCY_REPORT" ]; then
-  #           echo "Found Dependency Check report: $DEPENDENCY_REPORT"
-
-  #           curl -X POST \
-  #             "${{ vars.DEFECTDOJO_URL }}/api/v2/import-scan/" \
-  #             -H "Authorization: Token ${{ secrets.DEFECTDOJO_API_KEY }}" \
-  #             -H "Content-Type: multipart/form-data" \
-  #             -F "engagement=${{ vars.DEFECTDOJO_ENGAGEMENT_ID }}" \
-  #             -F "scan_type=Dependency Check JSON Report" \
-  #             -F "file=@$DEPENDENCY_REPORT" \
-  #             -F "verified=true" \
-  #             -F "active=true"
-
-  #           echo "== Dependency Check results uploaded successfully =="
-  #         else
-  #           echo "Dependency Check report not found at $DEPENDENCY_REPORT"
-  #         fi
-
-  #     - name: Upload GitLeaks results to DefectDojo
-
-  #       env:
-  #         DEFECTDOJO_URL: ${{ vars.DEFECTDOJO_URL }}
-  #         DEFECTDOJO_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
-  #         DEFECTDOJO_ENGAGEMENT_ID: ${{ vars.DEFECTDOJO_ENGAGEMENT_ID }}
-  #       run: |
-  #         echo "== Uploading GitLeaks results to DefectDojo =="
-
-  #         GITLEAKS_REPORT="gitleaks-reports/leaks.json"
-
-  #         if [ -f "$GITLEAKS_REPORT" ]; then
-  #           echo "Found GitLeaks report: $GITLEAKS_REPORT"
-
-  #           curl -X POST \
-  #             "${{ vars.DEFECTDOJO_URL }}/api/v2/import-scan/" \
-  #             -H "Authorization: Token ${{ secrets.DEFECTDOJO_API_KEY }}" \
-  #             -H "Content-Type: multipart/form-data" \
-  #             -F "engagement=${{ vars.DEFECTDOJO_ENGAGEMENT_ID }}" \
-  #             -F "scan_type=Generic JSON Report" \
-  #             -F "file=@$GITLEAKS_REPORT" \
-  #             -F "verified=true" \
-  #             -F "active=true"
-
-  #           echo "== GitLeaks results uploaded successfully =="
-  #         else
-  #           echo "GitLeaks report not found at $GITLEAKS_REPORT"
-  #         fi
-
-  # sonarCloudScan:
-  #   name: SonarCloud Fast Analysis
-  #   runs-on: ubuntu-latest
-  #   needs: [prepare, run-tests]
-
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v4
-  #       with:
-  #         fetch-depth: 0
-
-  #     - name: Find smallest PHP file
-  #       run: |
-  #         echo "=== Recherche du plus petit fichier PHP ==="
-  #         find app/Http/Controllers -name "*.php" -type f -exec wc -l {} \; | sort -n | head -5
-
-  #         mkdir -p minimal-scan
-  #         if [ -f "app/Http/Controllers/HomeController.php" ]; then
-  #           cp app/Http/Controllers/HomeController.php minimal-scan/
-  #         else
-  #           FIRST_FILE=$(find app/Http/Controllers -name "*.php" | head -1)
-  #           cp "$FIRST_FILE" minimal-scan/
-  #         fi
-
-  #         echo "Fichier copié :"
-  #         ls -la minimal-scan/
-
-  #     - name: SonarQube Single File Scan
-  #       uses: SonarSource/sonarqube-scan-action@v6
-  #       env:
-  #         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-  #       with:
-  #         args: >
-  #           -Dsonar.organization=aymennnb
-  #           -Dsonar.projectKey=aymennnb_devsecops_for_akaunting
-  #           -Dsonar.sources=minimal-scan
-  #           -Dsonar.sourceEncoding=UTF-8
-  #           -Dsonar.analysis.automaticAnalysis.disabled=true
-  #           -Dsonar.qualitygate.wait=false
-
-  build:
-    name: Build Docker Image
-    runs-on: ubuntu-latest
-    # needs: [semgrep-sast, sonarCloudScan, run-tests]
-    needs: prepare
-    env:
-      DOCKER_IMAGE_NAME: ${{ vars.DOCKER_IMAGE_NAME }}
-      IMAGE_TAG_COMMIT: ${{ vars.DOCKER_IMAGE_NAME}}:${{ github.sha }}
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build Docker image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./Dockerfile
-          push: false
-          load: true
-          tags: |
-            ${{ env.IMAGE_TAG_COMMIT }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          platforms: linux/amd64
-
-      - name: Save Docker image to tar file
-        run: |
-          echo "=== Sauvegarde de l'image Docker ==="
-          docker save ${{ env.IMAGE_TAG_COMMIT }} -o docker-image.tar
-          echo "== Image sauvegardée =="
-          ls -lh docker-image.tar
-
-      - name: Upload Docker image as artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: docker-image-${{ env.DOCKER_IMAGE_NAME }}-${{ github.sha }}
-          path: docker-image.tar
-          retention-days: 1
-
-  owasp-zap-dast:
-    name: DAST Security with OWASP ZAP
-    runs-on: ubuntu-latest
-    needs: build
-    continue-on-error: true
-    permissions: # ← Add this block
-      security-events: write # Allows creating security alerts
-      actions: read # Needed for artifact access
-      contents: read
-
-    env:
-      DOCKER_IMAGE_NAME: ${{ vars.DOCKER_IMAGE_NAME }}
-      IMAGE_TAG_COMMIT: ${{ vars.DOCKER_IMAGE_NAME}}:${{ github.sha }}
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Create directories
-        run: |
-          mkdir -p "GitHub Actions/DAST Security/Reports"
-
-      - name: Download Docker image artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: docker-image-${{ env.DOCKER_IMAGE_NAME }}-${{ github.sha }}
-          path: ./
-
-      - name: Load Docker image
-        run: |
-          echo "=== Loading Docker image ==="
-          docker load -i docker-image.tar
-          echo "== Docker image loaded =="
-          docker images | grep ${{ env.DOCKER_IMAGE_NAME }}
-
-      - name: Start Docker container
-        run: |
-          echo "=== Starting Docker container ==="
-          docker run -d \
-            --name akaunting-app \
-            -p 8080:80 \
-            ${{ env.IMAGE_TAG_COMMIT }}
-          echo "== Container started =="
-          sleep 10
-          docker ps
-
-      - name: Wait for application to be ready
-        run: |
-          echo "=== Waiting for application to be ready ==="
-          for i in {1..30}; do
-            if curl -s http://localhost:8080 > /dev/null; then
-              echo "Application is ready!"
-              exit 0
-            fi
-            echo "Waiting... (attempt $i/30)"
-            sleep 2
-          done
-          echo "Application did not respond in time"
-          exit 1
-
-      - name: Run OWASP ZAP scan
-        uses: zaproxy/action-full-scan@v0.7.0
-        with:
-          target: "http://localhost:8080"
-          cmd_options: "-a"
-        continue-on-error: true
-
-      - name: Upload ZAP scan results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: zap-scan-results-${{ github.sha }}
-          path: |
-            report_md.md
-            report_html.html
-            report_json.json
-          retention-days: 7
-
-      - name: Stop Docker container
-        if: always()
-        run: |
-          echo "=== Stopping Docker container ==="
-          docker stop akaunting-app || true
-          docker rm akaunting-app || true
-
-  # scan:
-  #   name: Scan Docker Image with Trivy
-  #   runs-on: ubuntu-latest
-  #   needs: build
-  #   env:
-  #     DOCKER_IMAGE_NAME: ${{ vars.DOCKER_IMAGE_NAME }}
-  #     IMAGE_TAG: ${{ github.sha }}
-
-  #   steps:
-  #     - name: Checkout repository
-  #       uses: actions/checkout@v4
-
-  #     - name: Download Docker image artifact
-  #       uses: actions/download-artifact@v4
-  #       with:
-  #         name: docker-image-${{ env.DOCKER_IMAGE_NAME }}-${{ github.sha }}
-  #         path: ./
-
-  #     - name: Load Docker image from tar file
-  #       run: |
-  #         echo "=== Chargement de l'image Docker depuis le fichier tar ==="
-  #         docker load -i docker-image.tar
-  #         echo "== Images chargées =="
-  #         docker images
-
-  #     - name: Set Date
-  #       id: set-date
-  #       run: echo "DATE=$(date +%m.%d.%Y)" >> $GITHUB_ENV
-
-  #     - name: Create output directory
-  #       run: mkdir -p "GitHub Actions/Trivy Automation"
-
-  #     - name: Install Trivy
-  #       run: |
-  #         sudo apt-get update
-  #         sudo apt-get install -y curl
-  #         curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sudo sh -s -- -b /usr/local/bin v0.57.0
-
-  #     - name: Download Trivy vulnerability database
-  #       run: trivy image --download-db-only
-
-  #     - name: Run Trivy vulnerability scanner
-  #       run: |
-  #         OUTPUT_FILE="GitHub Actions/Trivy Automation/scan-results-${DATE}.json"
-  #         mkdir -p "GitHub Actions/Trivy Automation"
-  #         trivy image --format json --ignore-unfixed --vuln-type os,library --severity CRITICAL,HIGH,MEDIUM,LOW -o "$OUTPUT_FILE" ${{ env.DOCKER_IMAGE_NAME }}:${{ env.IMAGE_TAG }}
-
-  #     - name: Upload scan results as artifact
-  #       uses: actions/upload-artifact@v4
-  #       with:
-  #         name: trivy-scan-results-${{ env.DATE }}
-  #         path: GitHub Actions/Trivy Automation/
-  #         retention-days: 7
-
-  # push:
-  #   name: Push Docker Image to Docker Hub
-  #   runs-on: ubuntu-latest
-  #   needs: [build, scan]
-  #   env:
-  #     DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-  #     DOCKER_IMAGE_NAME: ${{ vars.DOCKER_IMAGE_NAME }}
-  #     DOCKERHUB_TAG: ${{ secrets.DOCKERHUB_USERNAME }}/${{ vars.DOCKER_IMAGE_NAME }}:${{ github.sha }}
-
-  #   steps:
-  #     - name: Download Docker image artifact
-  #       uses: actions/download-artifact@v4
-  #       with:
-  #         name: docker-image-${{ env.DOCKER_IMAGE_NAME }}-${{ github.sha }}
-  #         path: ./
-
-  #     - name: Load Docker image from tar file
-  #       run: |
-  #         echo "=== Chargement de l'image Docker depuis le fichier tar ==="
-  #         docker load -i docker-image.tar
-  #         echo "== Images chargée =="
-  #         docker images
-
-  #     - name: Login to Docker Hub
-  #       uses: docker/login-action@v3
-  #       with:
-  #         username: ${{ env.DOCKERHUB_USERNAME }}
-  #         password: ${{ secrets.DOCKERHUB_PASSWORD }}
-
-  #     - name: Tag image for Docker Hub
-  #       run: |
-  #         echo "=== Tag de l'image pour Docker Hub ==="
-  #         docker tag ${{ env.DOCKER_IMAGE_NAME }}:${{ github.sha }} ${{ env.DOCKERHUB_TAG }}
-  #         echo "== Images taggées =="
-  #         docker images | grep ${{ env.DOCKERHUB_USERNAME }}
-
-  #     - name: Push to Docker Hub
-  #       run: |
-  #         echo "=== Push vers Docker Hub ==="
-  #         docker push ${{ env.DOCKERHUB_TAG }}
-  #         echo "== Images poussées avec succès =="
+#  run-tests:
+#    name: Unit & Feature Tests
+#    runs-on: ubuntu-latest
+#    needs: prepare
+#    continue-on-error: true
+#
+#    services:
+#      mysql:
+#        image: mysql:8.0
+#        env:
+#          MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
+#          MYSQL_USER: ${{ secrets.MYSQL_USER }}
+#          MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
+#          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
+#
+#    steps:
+#      - uses: actions/checkout@v4
+#
+#      - name: Setup PHP
+#        uses: shivammathur/setup-php@v2
+#        with:
+#          php-version: '8.3'
+#
+#      - uses: actions/cache@v3
+#        with:
+#          path: vendor
+#          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+#
+#      - name: Check dependencies
+#        run: |
+#          if [ ! -d "vendor" ]; then
+#            echo "== vendor non trouvé, installation... =="
+#            composer install --no-scripts
+#          else
+#            echo "== Utilisation du cache Composer =="
+#          fi
+#      - name: Setup test environment
+#        run: |
+#          echo "== Configuration de l'environnement de test... =="
+#          cp .env.example .env.testing
+#          php artisan key:generate --env=testing
+#          sed -i "s/DB_HOST=.*/DB_HOST=127.0.0.1/" .env.testing
+#          sed -i "s/DB_DATABASE=.*/DB_DATABASE=${{ secrets.MYSQL_DATABASE }}/" .env.testing
+#      - name: Run unit tests
+#        run: |
+#          echo "== Lancement des tests unitaires... =="
+#          vendor/bin/phpunit --testsuite Unit --log-junit unit-report.xml
+#          echo "== Tests unitaires terminés =="
+#        continue-on-error: true
+#
+#      - name: Run feature tests
+#        run: |
+#          echo "== Lancement des tests fonctionnels... =="
+#          vendor/bin/phpunit --testsuite Feature --log-junit feature-report.xml
+#          echo "== Tests fonctionnels terminés =="
+#        continue-on-error: true
+#
+#      - name: Upload test reports
+#        if: always()
+#        uses: actions/upload-artifact@v4
+#        with:
+#          name: test-reports-${{ github.run_id }}
+#          path: |
+#            unit-report.xml
+#            feature-report.xml
+
+#  semgrep-sast:
+#    name: SAST Security with Semgrep
+#    runs-on: ubuntu-latest
+#    needs: [prepare, run-tests]
+#    continue-on-error: true
+#
+#    steps:
+#      - name: Checkout code
+#        uses: actions/checkout@v4
+#
+#      - name: Create directories
+#        run: |
+#          mkdir -p "GitHub Actions/SAST Security/Reports"
+#      - name: Install Semgrep
+#        run: |
+#          python -m pip install semgrep
+#      - name: Run Semgrep SAST
+#        continue-on-error: true
+#        run: |
+#          semgrep ci --config=auto --json > "GitHub Actions/SAST Security/Reports/semgrep-general.json" || true
+#          echo "== Scan général terminé =="
+#          semgrep ci --config=p/owasp-top-ten --json > "GitHub Actions/SAST Security/Reports/semgrep-owasp.json" || true
+#          echo "== Scan OWASP terminé =="
+#      - name: Upload reports
+#        uses: actions/upload-artifact@v4
+#        with:
+#          name: sast-reports-${{ github.sha }}
+#          path: |
+#            GitHub Actions/SAST Security/Reports/
+#          retention-days: 7
+
+
+#  sonarCloudScan:
+#    name: SonarCloud Fast Analysis
+#    runs-on: ubuntu-latest
+#    needs: [ prepare, run-tests ]
+#
+#    steps:
+#      - name: Checkout code
+#        uses: actions/checkout@v4
+#        with:
+#          fetch-depth: 0
+#
+#      - name: Find smallest PHP file
+#        run: |
+#          echo "=== Recherche du plus petit fichier PHP ==="
+#          find app/Http/Controllers -name "*.php" -type f -exec wc -l {} \; | sort -n | head -5
+#          mkdir -p minimal-scan
+#          if [ -f "app/Http/Controllers/HomeController.php" ]; then
+#            cp app/Http/Controllers/HomeController.php minimal-scan/
+#          else
+#            FIRST_FILE=$(find app/Http/Controllers -name "*.php" | head -1)
+#            cp "$FIRST_FILE" minimal-scan/
+#          fi
+#          echo "Fichier copié :"
+#          ls -la minimal-scan/
+#      - name: SonarQube Single File Scan
+#        uses: SonarSource/sonarqube-scan-action@v6
+#        env:
+#          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+#        with:
+#          args: >
+#            -Dsonar.organization=aymennnb
+#            -Dsonar.projectKey=aymennnb_devsecops_for_akaunting
+#            -Dsonar.sources=minimal-scan
+#            -Dsonar.sourceEncoding=UTF-8
+#            -Dsonar.analysis.automaticAnalysis.disabled=true
+#            -Dsonar.qualitygate.wait=false
+#  build:
+#    name: Build Docker Image
+#    runs-on: ubuntu-latest
+#    needs: [ semgrep-sast, sonarCloudScan, run-tests ]
+#
+#    env:
+#      DOCKER_IMAGE_NAME: ${{ vars.DOCKER_IMAGE_NAME }}
+#      IMAGE_TAG_COMMIT: ${{ vars.DOCKER_IMAGE_NAME}}:${{ github.sha }}
+#
+#    steps:
+#      - name: Checkout code
+#        uses: actions/checkout@v4
+#
+#      - name: Set up Docker Buildx
+#        uses: docker/setup-buildx-action@v3
+#
+#      - name: Build Docker image
+#        uses: docker/build-push-action@v6
+#        with:
+#          context: .
+#          file: ./Dockerfile
+#          push: false
+#          load: true
+#          tags: |
+#            ${{ env.IMAGE_TAG_COMMIT }}
+#          cache-from: type=gha
+#          cache-to: type=gha,mode=max
+#          platforms: linux/amd64
+#
+#      - name: Save Docker image to tar file
+#        run: |
+#          echo "=== Sauvegarde de l'image Docker ==="
+#          docker save ${{ env.IMAGE_TAG_COMMIT }} -o docker-image.tar
+#          echo "== Image sauvegardée =="
+#          ls -lh docker-image.tar
+#      - name: Upload Docker image as artifact
+#        uses: actions/upload-artifact@v4
+#        with:
+#          name: docker-image-${{ env.DOCKER_IMAGE_NAME }}-${{ github.sha }}
+#          path: docker-image.tar
+#          retention-days: 1
+#
+#  scan:
+#    name: Scan Docker Image with Trivy
+#    runs-on: ubuntu-latest
+#    needs: build
+#    env:
+#      DOCKER_IMAGE_NAME: ${{ vars.DOCKER_IMAGE_NAME }}
+#      IMAGE_TAG: ${{ github.sha }}
+#
+#    steps:
+#      - name: Checkout repository
+#        uses: actions/checkout@v4
+#
+#      - name: Download Docker image artifact
+#        uses: actions/download-artifact@v4
+#        with:
+#          name: docker-image-${{ env.DOCKER_IMAGE_NAME }}-${{ github.sha }}
+#          path: ./
+#
+#      - name: Load Docker image from tar file
+#        run: |
+#          echo "=== Chargement de l'image Docker depuis le fichier tar ==="
+#          docker load -i docker-image.tar
+#          echo "== Images chargées =="
+#          docker images
+#      - name: Set Date
+#        id: set-date
+#        run: echo "DATE=$(date +%m.%d.%Y)" >> $GITHUB_ENV
+#
+#      - name: Create output directory
+#        run: mkdir -p "GitHub Actions/Trivy Automation"
+#
+#      - name: Install Trivy
+#        run: |
+#          sudo apt-get update
+#          sudo apt-get install -y curl
+#          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sudo sh -s -- -b /usr/local/bin v0.57.0
+#      - name: Download Trivy vulnerability database
+#        run: trivy image --download-db-only
+#
+#      - name: Run Trivy vulnerability scanner
+#        run: |
+#          OUTPUT_FILE="GitHub Actions/Trivy Automation/scan-results-${DATE}.json"
+#          mkdir -p "GitHub Actions/Trivy Automation"
+#          trivy image --format json --ignore-unfixed --vuln-type os,library --severity CRITICAL,HIGH,MEDIUM,LOW -o "$OUTPUT_FILE" ${{ env.DOCKER_IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+#      - name: Upload scan results as artifact
+#        uses: actions/upload-artifact@v4
+#        with:
+#          name: trivy-scan-results-${{ env.DATE }}
+#          path: GitHub Actions/Trivy Automation/
+#          retention-days: 7
+
+#  push:
+#    name: Push Docker Image to Docker Hub
+#    runs-on: ubuntu-latest
+#    needs: [build, scan]
+#    env:
+#      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+#      DOCKER_IMAGE_NAME: ${{ vars.DOCKER_IMAGE_NAME }}
+#      DOCKERHUB_TAG: ${{ secrets.DOCKERHUB_USERNAME }}/${{ vars.DOCKER_IMAGE_NAME }}:${{ github.sha }}
+#
+#    steps:
+#      - name: Download Docker image artifact
+#        uses: actions/download-artifact@v4
+#        with:
+#          name: docker-image-${{ env.DOCKER_IMAGE_NAME }}-${{ github.sha }}
+#          path: ./
+#
+#      - name: Load Docker image from tar file
+#        run: |
+#          echo "=== Chargement de l'image Docker depuis le fichier tar ==="
+#          docker load -i docker-image.tar
+#          echo "== Images chargée =="
+#          docker images
+#      - name: Login to Docker Hub
+#        uses: docker/login-action@v3
+#        with:
+#          username: ${{ env.DOCKERHUB_USERNAME }}
+#          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+#
+#      - name: Tag image for Docker Hub
+#        run: |
+#          echo "=== Tag de l'image pour Docker Hub ==="
+#          docker tag ${{ env.DOCKER_IMAGE_NAME }}:${{ github.sha }} ${{ env.DOCKERHUB_TAG }}
+#          echo "== Images taggées =="
+#          docker images | grep ${{ env.DOCKERHUB_USERNAME }}
+#      - name: Push to Docker Hub
+#        run: |
+#          echo "=== Push vers Docker Hub ==="
+#          docker push ${{ env.DOCKERHUB_TAG }}
+#          echo "== Images poussées avec succès =="
