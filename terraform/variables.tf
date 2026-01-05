@@ -9,9 +9,3 @@ variable "project_name" {
   type        = string
   default     = "juice-shop"
 }
-
-variable "AWS_ROLE_TO_ASSUME" {
-  description = "ARN of AWS role to assume (optional for OIDC workflows)"
-  type        = string
-  default     = ""
-}
