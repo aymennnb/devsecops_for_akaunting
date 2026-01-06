@@ -29,13 +29,19 @@ jobs:
       MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
       MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
 
-  semgrep-sast:
-    needs: [ build, tests ]
-    uses: ./.github/workflows/semgrep-sast.yml
+#  semgrep-sast:
+#    needs: [ build, tests ]
+#    uses: ./.github/workflows/semgrep-sast.yml
+#
+#  snyk-sast:
+#    needs: [ build, tests ]
+#    uses: ./.github/workflows/snyk-sast.yml
+#    secrets:
+#      SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
-  snyk-sast:
+  sast-security:
     needs: [ build, tests ]
-    uses: ./.github/workflows/snyk-sast.yml
+    uses: ./.github/workflows/sast-security.yml
     secrets:
       SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
