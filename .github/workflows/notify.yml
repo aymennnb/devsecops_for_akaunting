@@ -1,0 +1,76 @@
+name: Notify Slack
+
+on:
+  workflow_call:
+    secrets:
+      SLACK_WEBHOOK_URL:
+        required: true
+      SMTP_SERVER:
+        required: true
+      SMTP_PORT:
+        required: true
+      SMTP_USERNAME:
+        required: true
+      SMTP_PASSWORD:
+        required: true
+      EMAIL_TO:
+        required: true
+      EMAIL_FROM:
+        required: true
+
+jobs:
+  notify:
+    name: Send Slack Notification
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Notify Slack
+        run: |
+          if [ "${{ job.status }}" == "success" ]; then
+            EMOJI="🎉"
+            STATUS="PASSED"
+          else
+            EMOJI="💥"
+            STATUS="FAILED"
+          fi
+          
+          curl -X POST -H 'Content-type: application/json' \
+            --data "{\"text\":\"${EMOJI} ${{ github.repository }} | ${{ github.ref_name }} | ${STATUS}\n<https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|Details>\"}" \
+            ${{ secrets.SLACK_WEBHOOK_URL }}
+  
+  send-email:
+    name: Send Email Notification
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Email Success
+        if: success()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{ secrets.SMTP_SERVER }}
+          server_port: ${{ secrets.SMTP_PORT }}
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          secure: true
+          subject: "🎉 CI/CD Success: ${{ github.repository }}"
+          body: |
+            The CI/CD pipeline for ${{ github.repository }} completed successfully.
+            Run URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          to: ${{ secrets.EMAIL_TO }}
+          from: ${{ secrets.EMAIL_FROM }}
+
+      - name: Email Failure
+        if: failure()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{ secrets.SMTP_SERVER }}
+          server_port: ${{ secrets.SMTP_PORT }}
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          secure: true
+          subject: "💥 CI/CD Failure: ${{ github.repository }}"
+          body: |
+            The CI/CD pipeline for ${{ github.repository }} failed.
+            Run URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          to: ${{ secrets.EMAIL_TO }}
+          from: ${{ secrets.EMAIL_FROM }}
