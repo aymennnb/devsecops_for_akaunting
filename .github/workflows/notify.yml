@@ -43,7 +43,7 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      - name: Email: Success
+      - name: Email Success
         if: success()
         uses: dawidd6/action-send-mail@v3
         with:
@@ -70,7 +70,7 @@ jobs:
           to: ${{ secrets.EMAIL_TO }}
           from: ${{ secrets.EMAIL_FROM }}
 
-      - name: Email: Failure
+      - name: Email Failure
         if: failure()
         uses: dawidd6/action-send-mail@v3
         with:
