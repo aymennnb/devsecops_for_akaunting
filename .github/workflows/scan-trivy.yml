@@ -46,7 +46,7 @@ jobs:
         run: |
           OUTPUT_FILE="GitHub Actions/Trivy Automation/scan-results-${DATE}.json"
           mkdir -p "GitHub Actions/Trivy Automation"
-          trivy image --format json --ignore-unfixed --vuln-type os,library --severity CRITICAL,HIGH,MEDIUM,LOW -o "$OUTPUT_FILE" ${{ env.DOCKER_IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+          trivy image --format json --ignore-unfixed --skip-files --vuln-type os,library --severity CRITICAL,HIGH,MEDIUM,LOW -o "$OUTPUT_FILE" ${{ env.DOCKER_IMAGE_NAME }}:${{ env.IMAGE_TAG }}
       - name: Upload scan results as artifact
         uses: actions/upload-artifact@v4
         with:

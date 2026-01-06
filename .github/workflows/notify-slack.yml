@@ -1,0 +1,28 @@
+name: Notify Slack
+
+on:
+  workflow_call:
+
+jobs:
+  notify:
+    name: Send Slack Notification
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Notify Slack (success)
+        if: success()
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+            --data "$(printf '{"text":"CI/CD SUCCESS: %s\nRun: %s"}' \
+            '${{ github.repository }}' \
+            'https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}')" \
+            ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Notify Slack (failure)
+        if: failure()
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+            --data "$(printf '{"text":"CI/CD FAILURE: %s\nRun: %s"}' \
+            '${{ github.repository }}' \
+            'https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}')" \
+            ${{ secrets.SLACK_WEBHOOK_URL }}

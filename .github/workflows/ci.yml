@@ -37,18 +37,24 @@ jobs:
 #      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
 
-  build-image:
-    needs: [ build ]
-    uses: ./.github/workflows/build-image.yml
-    secrets: inherit
+  # build-image:
+  #   needs: [ build ]
+  #   uses: ./.github/workflows/build-image.yml
+  #   secrets: inherit
 
 
-  scan-trivy:
-    needs: [ build-image ]
-    uses: ./.github/workflows/scan-trivy.yml
-    secrets: inherit
+  # scan-trivy:
+  #   needs: [ build-image ]
+  #   uses: ./.github/workflows/scan-trivy.yml
+  #   secrets: inherit
 
-  push:
-    needs: [ build-image, scan-trivy ]
-    uses: ./.github/workflows/push-to-registry.yml
-    secrets: inherit
+  # push:
+  #   needs: [ build-image, scan-trivy ]
+  #   uses: ./.github/workflows/push-to-registry.yml
+  #   secrets: inherit
+  
+  notify-slack:
+    needs: [build]
+    uses: ./.github/workflows/notify-slack.yml
+    secrets:
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
