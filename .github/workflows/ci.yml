@@ -12,13 +12,13 @@ on:
 
 jobs:
 
-  build:
-    uses: ./.github/workflows/build.yml
-    secrets:
-      MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
-      MYSQL_USER: ${{ secrets.MYSQL_USER }}
-      MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
-      MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
+  # build:
+  #   uses: ./.github/workflows/build.yml
+  #   secrets:
+  #     MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
+  #     MYSQL_USER: ${{ secrets.MYSQL_USER }}
+  #     MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
+  #     MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
 
 #  tests:
 #    needs: build
@@ -54,7 +54,7 @@ jobs:
   #   secrets: inherit
   
   notify:
-    needs: [build]
+    # needs: [build]
     uses: ./.github/workflows/notify.yml
     secrets:
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
