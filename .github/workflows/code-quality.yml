@@ -1,0 +1,4 @@
+- PHPStan/PHPCS pour PHP
+- ESLint/Prettier pour JS
+- Pylint/Black pour Python
+- Security lint (bandit, safety)

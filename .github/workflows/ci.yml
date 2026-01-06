@@ -11,15 +11,30 @@ on:
     branches: [main]
 
 jobs:
+  code-quality:
+    name: Code Quality & Linting
+    uses: ./.github/workflows/code-quality.yml
 
-  build:
-    uses: ./.github/workflows/build.yml
-    secrets:
-      MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
-      MYSQL_USER: ${{ secrets.MYSQL_USER }}
-      MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
-      MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
+  secrets-detection:
+    name: Secrets Detection
+    uses: ./.github/workflows/secrets-detection.yml
 
+#  sca-scan:
+#    name: Dependency Security (SCA)
+#    needs: build
+#    uses: ./.github/workflows/sca-scan.yml
+#    secrets:
+#      SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+#
+#  build:
+#    needs: [code-quality, secrets-detection]
+#    uses: ./.github/workflows/build.yml
+#    secrets:
+#      MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
+#      MYSQL_USER: ${{ secrets.MYSQL_USER }}
+#      MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
+#      MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
+#
 #  tests:
 #    needs: build
 #    uses: ./.github/workflows/tests.yml
@@ -30,41 +45,39 @@ jobs:
 #      MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
 
 #  sast-security:
-#    needs: [ build ]
+#    needs: [ build,tests ]
 #    uses: ./.github/workflows/sast-security.yml
 #    secrets:
 #      SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 #      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
+#  build-image:
+#    needs: [ sast-security ]
+#    uses: ./.github/workflows/build-image.yml
+#    secrets: inherit
+#
+#  dast-security:
+#    needs: [ build-image ]
+#    uses: ./.github/workflows/dast-security.yml
+#
+#  scan-trivy:
+#    needs: [ build-image ]
+#    uses: ./.github/workflows/scan-trivy.yml
+#    secrets: inherit
+#
+#  push:
+#    needs: [ build-image, sast-security, dast-security, scan-trivy ]
+#    uses: ./.github/workflows/push-to-registry.yml
+#    secrets: inherit
 
-  build-image:
-    needs: [ build ]
-    uses: ./.github/workflows/build-image.yml
-    secrets: inherit
-
-  dast-security:
-    needs: [ build-image ]
-    uses: ./.github/workflows/dast-security.yml
-
-
-  # scan-trivy:
-  #   needs: [ build-image ]
-  #   uses: ./.github/workflows/scan-trivy.yml
-  #   secrets: inherit
-
-  # push:
-  #   needs: [ build-image, scan-trivy ]
-  #   uses: ./.github/workflows/push-to-registry.yml
-  #   secrets: inherit
-  
-  notify:
-    needs: [dast-security]
-    uses: ./.github/workflows/notify.yml
-    secrets:
-      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-      SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
-      SMTP_PORT: ${{ secrets.SMTP_PORT }}
-      SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
-      SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
-      TEAM_EMAILS: ${{ secrets.TEAM_EMAILS }}
-      EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+#  notify:
+#    needs: [push]
+#    uses: ./.github/workflows/notify.yml
+#    secrets:
+#      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+#      SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
+#      SMTP_PORT: ${{ secrets.SMTP_PORT }}
+#      SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+#      SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+#      TEAM_EMAILS: ${{ secrets.TEAM_EMAILS }}
+#      EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
