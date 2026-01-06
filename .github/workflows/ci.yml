@@ -45,7 +45,7 @@ jobs:
     uses: ./.github/workflows/dast-security.yml
 
   scan-trivy:
-    needs: [ build-image ]
+    needs: [ build-image,dast-security ]
     uses: ./.github/workflows/scan-trivy.yml
     secrets: inherit
 
