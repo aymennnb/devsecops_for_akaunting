@@ -12,7 +12,6 @@ on:
 
 jobs:
   build:
-    needs: [code-quality, secrets-detection]
     uses: ./.github/workflows/build.yml
     secrets:
       MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
