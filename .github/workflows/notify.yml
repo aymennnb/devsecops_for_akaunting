@@ -52,7 +52,7 @@ jobs:
           username: ${{ secrets.SMTP_USERNAME }}
           password: ${{ secrets.SMTP_PASSWORD }}
           secure: true
-          subject: "✅ CI/CD Success: ${{ github.repository }}"
+          subject: "🎉 CI/CD Success: ${{ github.repository }}"
           body: |
             The CI/CD pipeline for ${{ github.repository }} completed successfully.
             
@@ -70,8 +70,6 @@ jobs:
           to: ${{ secrets.EMAIL_TO }}
           from: ${{ secrets.EMAIL_FROM }}
       
-      
-      # Étape 3 : Email (Failure)
       - name: Email Failure
         if: failure()
         uses: dawidd6/action-send-mail@v3
@@ -81,7 +79,7 @@ jobs:
           username: ${{ secrets.SMTP_USERNAME }}
           password: ${{ secrets.SMTP_PASSWORD }}
           secure: true
-          subject: "❌ CI/CD Failure: ${{ github.repository }}"
+          subject: "💥 CI/CD Failure: ${{ github.repository }}"
           body: |
             The CI/CD pipeline for ${{ github.repository }} failed.
             
