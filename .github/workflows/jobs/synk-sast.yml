@@ -1,0 +1,44 @@
+name: Snyk SAST Security Job
+
+on:
+  workflow_call:
+    secrets:
+      SNYK_TOKEN:
+        required: true
+
+jobs:
+  snyk-security:
+    name: Snyk SAST Security Scan
+    runs-on: ubuntu-latest
+#    permissions:
+#      security-events: write
+
+    outputs:
+      sarif-file: ${{ steps.generate-sarif.outputs.sarif-path }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+
+      - name: Run Snyk TEST with SARIF output
+        id: generate-sarif
+        uses: snyk/actions/php@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=medium --sarif-file-output=snyk.sarif
+          command: test
+
+      - name: Run Snyk MONITOR to Dashboard
+        uses: snyk/actions/php@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high
+          command: monitor

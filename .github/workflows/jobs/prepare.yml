@@ -1,0 +1,120 @@
+name: Prepare Environment Job
+
+on:
+  workflow_call:
+    secrets:
+      MYSQL_DATABASE:
+        required: true
+      MYSQL_USER:
+        required: true
+      MYSQL_PASSWORD:
+        required: true
+      MYSQL_ROOT_PASSWORD:
+        required: true
+
+
+jobs:
+  setup-environment:
+    name: Install Dependencies & Setup Database
+    runs-on: ubuntu-latest
+
+    services:
+      mysql-service:
+        image: mysql:8.0
+        ports:
+          - 3306:3306
+        env:
+          MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
+          MYSQL_USER: ${{ secrets.MYSQL_USER }}
+          MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
+          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+
+    outputs:
+      environment-ready: ${{ steps.setup-database.outputs.environment-ready }}
+      db-host: '127.0.0.1'
+
+    env:
+      APP_ENV: testing
+      MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
+      MYSQL_USER: ${{ secrets.MYSQL_USER }}
+      MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
+
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v3
+        with:
+          path: vendor
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-composer-
+
+      - name: Cache npm dependencies
+        uses: actions/cache@v3
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist --no-scripts
+
+      - name: Install npm dependencies
+        run: npm install
+
+      - name: Setup application environment
+        id: setup-env
+        run: |
+          echo "== Configuration de l'environnement... =="
+          cp .env.example .env
+          php artisan key:generate
+          sed -i "s/APP_ENV=.*/APP_ENV=${{ env.APP_ENV }}/" .env
+          sed -i "s/APP_DEBUG=.*/APP_DEBUG=true/" .env
+          sed -i "s/DB_HOST=.*/DB_HOST=127.0.0.1/" .env
+          sed -i "s/DB_PORT=.*/DB_PORT=3306/" .env
+          sed -i "s/DB_DATABASE=.*/DB_DATABASE=${{ env.MYSQL_DATABASE }}/" .env
+          sed -i "s/DB_USERNAME=.*/DB_USERNAME=${{ env.MYSQL_USER }}/" .env
+          sed -i "s/DB_PASSWORD=.*/DB_PASSWORD=${{ env.MYSQL_PASSWORD }}/" .env
+          mkdir -p storage/framework/{sessions,views,cache}
+          mkdir -p bootstrap/cache
+          echo "environment-configured=true" >> $GITHUB_OUTPUT
+
+      - name: Wait for MySQL to be ready
+        env:
+          MYSQL_PWD: ${{ env.MYSQL_PASSWORD }}
+        run: |
+          echo "== Attente de MySQL... =="
+          until mysqladmin -h 127.0.0.1 -u${{ env.MYSQL_USER }} ping 2>/dev/null; do
+            echo "En attente de MySQL..."
+            sleep 2
+          done
+          echo "== MySQL est prêt =="
+
+      - name: Setup Database
+        id: setup-database
+        env:
+          MYSQL_PWD: ${{ env.MYSQL_PASSWORD }}
+        run: |
+          echo "== Configuration de la base de données... =="
+          mysql -h 127.0.0.1 -u${{ env.MYSQL_USER }} -e "CREATE DATABASE IF NOT EXISTS ${{ env.MYSQL_DATABASE }};"
+          php artisan migrate --force
+          echo "== Base de données configurée =="
+          echo "environment-ready=true" >> $GITHUB_OUTPUT
