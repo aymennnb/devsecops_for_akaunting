@@ -87,7 +87,6 @@ jobs:
   nuclei-dast:
     name: DAST Security with Nuclei
     runs-on: ubuntu-latest
-    needs: owasp-zap-dast
     continue-on-error: true
 
     env:
@@ -157,7 +156,6 @@ jobs:
         run: |
           echo "=== Formatting JSON report ==="
           if [ -s "GitHub Actions/DAST Security/Reports/Nuclei/nuclei-results.json" ]; then
-            # Formatter le JSON pour qu'il soit lisible
             jq '.' "GitHub Actions/DAST Security/Reports/Nuclei/nuclei-results.json" > "GitHub Actions/DAST Security/Reports/nuclei-report.json"
             echo "JSON report formatted"
           else
