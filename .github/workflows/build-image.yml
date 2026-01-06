@@ -1,0 +1,46 @@
+name: Build Docker Image
+
+on:
+  workflow_call:
+
+jobs:
+  build:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+
+    env:
+      DOCKER_IMAGE_NAME: ${{ vars.DOCKER_IMAGE_NAME }}
+      IMAGE_TAG_COMMIT: ${{ vars.DOCKER_IMAGE_NAME}}:${{ github.sha }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: false
+          load: true
+          tags: |
+            ${{ env.IMAGE_TAG_COMMIT }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64
+
+      - name: Save Docker image to tar file
+        run: |
+          echo "=== Sauvegarde de l'image Docker ==="
+          docker save ${{ env.IMAGE_TAG_COMMIT }} -o docker-image.tar
+          echo "== Image sauvegardée =="
+          ls -lh docker-image.tar
+      - name: Upload Docker image as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image-${{ env.DOCKER_IMAGE_NAME }}-${{ github.sha }}
+          path: docker-image.tar
+          retention-days: 1

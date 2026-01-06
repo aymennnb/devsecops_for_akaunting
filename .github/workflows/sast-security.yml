@@ -57,7 +57,7 @@ jobs:
           retention-days: 7
 
   snyk-sast:
-    name: Snyk SAST Security Scan
+    name: SAST Security with Snyk
     runs-on: ubuntu-latest
 
     outputs:
@@ -91,7 +91,7 @@ jobs:
           command: monitor
 
   sonarcloud-sast:
-    name: SonarCloud Fast Analysis
+    name: SAST Security with SonarQubeCloud
     runs-on: ubuntu-latest
 
     steps:
