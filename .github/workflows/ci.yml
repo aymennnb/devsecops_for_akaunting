@@ -45,9 +45,6 @@ jobs:
   dast-security:
     needs: [ build-image ]
     uses: ./.github/workflows/dast-security.yml
-    vars:
-      DOCKER_IMAGE_NAME: ${{ vars.DOCKER_IMAGE_NAME }}
-      IMAGE_TAG_COMMIT: ${{ vars.DOCKER_IMAGE_NAME}}:${{ github.sha }}
 
 
   # scan-trivy:

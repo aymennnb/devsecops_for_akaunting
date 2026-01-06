@@ -2,12 +2,6 @@ name: DAST Security with OWASP ZAP
 
 on:
   workflow_call:
-    vars:
-      DOCKER_IMAGE_NAME:
-        required: true
-      IMAGE_TAG_COMMIT:
-        required: true
-
 
 jobs:
   owasp-zap-dast:
@@ -17,7 +11,7 @@ jobs:
 
     env:
       DOCKER_IMAGE_NAME: ${{ vars.DOCKER_IMAGE_NAME }}
-      IMAGE_TAG_COMMIT: ${{ vars.IMAGE_TAG_COMMIT }}
+      IMAGE_TAG_COMMIT: ${{ vars.DOCKER_IMAGE_NAME}}:${{ github.sha }}
 
     steps:
       - name: Checkout code
