@@ -10,8 +10,6 @@ jobs:
   snyk-security:
     name: Snyk SAST Security Scan
     runs-on: ubuntu-latest
-#    permissions:
-#      security-events: write
 
     outputs:
       sarif-file: ${{ steps.generate-sarif.outputs.sarif-path }}

@@ -1,0 +1,51 @@
+name: Semgrep SAST Scan Job
+
+on:
+  workflow_call:
+
+jobs:
+  run-semgrep:
+    name: SAST Security with Semgrep
+    runs-on: ubuntu-latest
+    continue-on-error: true
+
+    outputs:
+      scan-completed: ${{ steps.upload-reports.outcome }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create report directories
+        run: |
+          mkdir -p "GitHub Actions/SAST Security/Reports"
+
+      - name: Install Semgrep
+        run: |
+          python -m pip install semgrep
+
+      - name: Run Semgrep General Scan
+        id: semgrep-general
+        run: |
+          echo "== Scan général Semgrep... =="
+          semgrep ci --config=auto --json > "GitHub Actions/SAST Security/Reports/semgrep-general.json" || true
+          echo "== Scan général terminé =="
+        continue-on-error: true
+
+      - name: Run Semgrep OWASP Scan
+        id: semgrep-owasp
+        run: |
+          echo "== Scan OWASP Semgrep... =="
+          semgrep ci --config=p/owasp-top-ten --json > "GitHub Actions/SAST Security/Reports/semgrep-owasp.json" || true
+          echo "== Scan OWASP terminé =="
+        continue-on-error: true
+
+      - name: Upload Semgrep reports
+        id: upload-reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: semgrep-sast-reports-${{ github.sha }}
+          path: |
+            GitHub Actions/SAST Security/Reports/
+          retention-days: 7

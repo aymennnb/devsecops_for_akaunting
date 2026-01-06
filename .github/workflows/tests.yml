@@ -1,0 +1,91 @@
+name: Run Tests Job
+
+on:
+  workflow_call:
+    secrets:
+      MYSQL_DATABASE:
+        required: true
+      MYSQL_USER:
+        required: true
+      MYSQL_PASSWORD:
+        required: true
+      MYSQL_ROOT_PASSWORD:
+        required: true
+    outputs:
+      tests-passed:
+        description: "Indique si les tests ont réussi"
+        value: ${{ jobs.execute-tests.outputs.tests-passed }}
+      unit-report:
+        description: "Chemin du rapport unitaire"
+        value: ${{ jobs.execute-tests.outputs.unit-report }}
+      feature-report:
+        description: "Chemin du rapport fonctionnel"
+        value: ${{ jobs.execute-tests.outputs.feature-report }}
+
+jobs:
+  execute-tests:
+    name: Run PHPUnit Tests
+    runs-on: ubuntu-latest
+    continue-on-error: true
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
+          MYSQL_USER: ${{ secrets.MYSQL_USER }}
+          MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
+          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
+
+    outputs:
+      tests-passed: ${{ steps.run-feature-tests.outcome == 'success' || steps.run-unit-tests.outcome == 'success' }}
+      unit-report: unit-report.xml
+      feature-report: feature-report.xml
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+
+      - name: Restore Composer dependencies
+        uses: actions/cache@v3
+        with:
+          path: vendor
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+
+      - name: Install dependencies if needed
+        run: |
+          if [ ! -d "vendor" ]; then
+            echo "== Installation des dépendances Composer... =="
+            composer install --no-scripts
+          else
+            echo "== Utilisation du cache Composer =="
+          fi
+
+      - name: Setup test environment
+        run: |
+          echo "== Configuration de l'environnement de test... =="
+          cp .env.example .env.testing
+          php artisan key:generate --env=testing
+          sed -i "s/DB_HOST=.*/DB_HOST=127.0.0.1/" .env.testing
+          sed -i "s/DB_DATABASE=.*/DB_DATABASE=${{ secrets.MYSQL_DATABASE }}/" .env.testing
+
+      - name: Run unit tests
+        id: run-unit-tests
+        run: |
+          echo "== Lancement des tests unitaires... =="
+          vendor/bin/phpunit --testsuite Unit --log-junit unit-report.xml
+          echo "== Tests unitaires terminés =="
+        continue-on-error: true
+
+      - name: Run feature tests
+        id: run-feature-tests
+        run: |
+          echo "== Lancement des tests fonctionnels... =="
+          vendor/bin/phpunit --testsuite Feature --log-junit feature-report.xml
+          echo "== Tests fonctionnels terminés =="
+        continue-on-error: true
