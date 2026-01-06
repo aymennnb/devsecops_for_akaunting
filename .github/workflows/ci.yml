@@ -36,7 +36,6 @@ jobs:
 #      SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 #      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
-
   # build-image:
   #   needs: [ build ]
   #   uses: ./.github/workflows/build-image.yml
