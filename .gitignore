@@ -103,3 +103,11 @@ akaunting-data/
 node_modules/
 vendor/
 .env
+
+
+#terraform
+.terraform/
+*.tfstate
+*.tfstate.backup
+.crash.log
+terraform.tfvars
