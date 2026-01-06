@@ -43,7 +43,7 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      - name: Email Success
+      - name: Email: Success
         if: success()
         uses: dawidd6/action-send-mail@v3
         with:
@@ -55,22 +55,11 @@ jobs:
           subject: "🎉 CI/CD Success: ${{ github.repository }}"
           body: |
             The CI/CD pipeline for ${{ github.repository }} completed successfully.
-            
             Run URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-            
-            Details:
-            - Repository: ${{ github.repository }}
-            - Branch: ${{ github.ref_name }}
-            - Commit: ${GITHUB_SHA:0:7}
-            - Triggered by: ${{ github.actor }}
-            - Workflow: ${{ github.workflow }}
-            
-            ---
-            This is an automated notification from GitHub Actions.
           to: ${{ secrets.EMAIL_TO }}
           from: ${{ secrets.EMAIL_FROM }}
-      
-      - name: Email Failure
+
+      - name: Email: Failure
         if: failure()
         uses: dawidd6/action-send-mail@v3
         with:
@@ -82,18 +71,6 @@ jobs:
           subject: "💥 CI/CD Failure: ${{ github.repository }}"
           body: |
             The CI/CD pipeline for ${{ github.repository }} failed.
-            
             Run URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-            
-            Details:
-            - Repository: ${{ github.repository }}
-            - Branch: ${{ github.ref_name }}
-            - Commit: ${GITHUB_SHA:0:7}
-            - Triggered by: ${{ github.actor }}
-            - Workflow: ${{ github.workflow }}
-            
-            Please check the workflow logs for details.
-            ---
-            This is an automated notification from GitHub Actions.
           to: ${{ secrets.EMAIL_TO }}
           from: ${{ secrets.EMAIL_FROM }}
