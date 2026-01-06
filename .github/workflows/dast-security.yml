@@ -4,9 +4,90 @@ on:
   workflow_call:
 
 jobs:
-  owasp-zap-dast:
-    name: DAST Security with OWASP ZAP
+  # owasp-zap-dast:
+  #   name: DAST Security with OWASP ZAP
+  #   runs-on: ubuntu-latest
+  #   continue-on-error: true
+
+  #   env:
+  #     DOCKER_IMAGE_NAME: ${{ vars.DOCKER_IMAGE_NAME }}
+  #     IMAGE_TAG_COMMIT: ${{ vars.DOCKER_IMAGE_NAME}}:${{ github.sha }}
+
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
+
+  #     - name: Create directories
+  #       run: |
+  #         mkdir -p "GitHub Actions/DAST Security/Reports"
+      
+  #     - name: Download Docker image artifact
+  #       uses: actions/download-artifact@v4
+  #       with:
+  #         name: docker-image-${{ env.DOCKER_IMAGE_NAME }}-${{ github.sha }}
+  #         path: ./
+
+  #     - name: Load Docker image
+  #       run: |
+  #         echo "=== Loading Docker image ==="
+  #         docker load -i docker-image.tar
+  #         echo "== Docker image loaded =="
+  #         docker images | grep ${{ env.DOCKER_IMAGE_NAME }}
+      
+  #     - name: Start Docker container
+  #       run: |
+  #         echo "=== Starting Docker container ==="
+  #         docker run -d \
+  #           --name akaunting-app \
+  #           -p 8080:80 \
+  #           ${{ env.IMAGE_TAG_COMMIT }}
+  #         echo "== Container started =="
+  #         sleep 10
+  #         docker ps
+      
+  #     - name: Wait for application to be ready
+  #       run: |
+  #         echo "=== Waiting for application to be ready ==="
+  #         for i in {1..30}; do
+  #           if curl -s http://localhost:8080 > /dev/null; then
+  #             echo "Application is ready!"
+  #             exit 0
+  #           fi
+  #           echo "Waiting... (attempt $i/30)"
+  #           sleep 2
+  #         done
+  #         echo "Application did not respond in time"
+  #         exit 1
+      
+  #     - name: Run OWASP ZAP scan
+  #       uses: zaproxy/action-full-scan@v0.7.0
+  #       with:
+  #         target: "http://localhost:8080"
+  #         cmd_options: "-a"
+  #       continue-on-error: true
+
+  #     - name: Upload ZAP scan results
+  #       if: always()
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: zap-scan-results-${{ github.sha }}
+  #         path: |
+  #           report_md.md
+  #           report_html.html
+  #           report_json.json
+  #         retention-days: 7
+
+  #     - name: Stop Docker container
+  #       if: always()
+  #       run: |
+  #         echo "=== Stopping Docker container ==="
+  #         docker stop akaunting-app
+  #         docker rm akaunting-app
+
+nuclei-dast:
+    name: DAST Security with Nuclei
     runs-on: ubuntu-latest
+    needs: owasp-zap-dast
     continue-on-error: true
 
     env:
@@ -19,7 +100,7 @@ jobs:
 
       - name: Create directories
         run: |
-          mkdir -p "GitHub Actions/DAST Security/Reports"
+          mkdir -p "GitHub Actions/DAST Security/Reports/Nuclei"
       
       - name: Download Docker image artifact
         uses: actions/download-artifact@v4
@@ -29,57 +110,70 @@ jobs:
 
       - name: Load Docker image
         run: |
-          echo "=== Loading Docker image ==="
+          echo "=== Loading Docker image for Nuclei scan ==="
           docker load -i docker-image.tar
-          echo "== Docker image loaded =="
-          docker images | grep ${{ env.DOCKER_IMAGE_NAME }}
       
       - name: Start Docker container
         run: |
-          echo "=== Starting Docker container ==="
+          echo "=== Starting container for Nuclei ==="
           docker run -d \
-            --name akaunting-app \
-            -p 8080:80 \
+            --name nuclei-app \
+            -p 8081:80 \
             ${{ env.IMAGE_TAG_COMMIT }}
-          echo "== Container started =="
           sleep 10
-          docker ps
       
-      - name: Wait for application to be ready
+      - name: Wait for application
         run: |
-          echo "=== Waiting for application to be ready ==="
-          for i in {1..30}; do
-            if curl -s http://localhost:8080 > /dev/null; then
-              echo "Application is ready!"
-              exit 0
+          for i in {1..20}; do
+            if curl -s http://localhost:8081 > /dev/null; then
+              echo "App ready for Nuclei"
+              break
             fi
-            echo "Waiting... (attempt $i/30)"
             sleep 2
           done
-          echo "Application did not respond in time"
-          exit 1
       
-      - name: Run OWASP ZAP scan
-        uses: zaproxy/action-full-scan@v0.7.0
-        with:
-          target: "http://localhost:8080"
-          cmd_options: "-a"
-        continue-on-error: true
-
-      - name: Upload ZAP scan results
+      - name: Install Nuclei
+        run: |
+          echo "=== Installing Nuclei ==="
+          go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest
+          sudo cp ~/go/bin/nuclei /usr/local/bin/
+          nuclei -version
+      
+      - name: Update Nuclei templates
+        run: |
+          nuclei -update-templates
+      
+      - name: Run Nuclei scan
+        run: |
+          echo "=== Running Nuclei DAST scan ==="
+          nuclei -u http://localhost:8081 \
+            -severity medium,high,critical \
+            -rate-limit 150 \
+            -timeout 30 \
+            -o "GitHub Actions/DAST Security/Reports/Nuclei/nuclei-results.json" \
+            -json
+      
+      - name: Format JSON report
+        run: |
+          echo "=== Formatting JSON report ==="
+          if [ -s "GitHub Actions/DAST Security/Reports/Nuclei/nuclei-results.json" ]; then
+            # Formatter le JSON pour qu'il soit lisible
+            jq '.' "GitHub Actions/DAST Security/Reports/Nuclei/nuclei-results.json" > "GitHub Actions/DAST Security/Reports/nuclei-report.json"
+            echo "JSON report formatted"
+          else
+            echo "No results found" > "GitHub Actions/DAST Security/Reports/nuclei-report.json"
+          fi
+      
+      - name: Upload Nuclei results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: zap-scan-results-${{ github.sha }}
-          path: |
-            report_md.md
-            report_html.html
-            report_json.json
+          name: nuclei-dast-results-${{ github.sha }}
+          path: GitHub Actions/DAST Security/Reports/nuclei-report.json
           retention-days: 7
-
-      - name: Stop Docker container
+      
+      - name: Stop container
         if: always()
         run: |
-          echo "=== Stopping Docker container ==="
-          docker stop akaunting-app
-          docker rm akaunting-app
+          docker stop nuclei-app || true
+          docker rm nuclei-app || true
