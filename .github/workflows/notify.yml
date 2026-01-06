@@ -69,7 +69,8 @@ jobs:
             This is an automated notification from GitHub Actions.
           to: ${{ secrets.EMAIL_TO }}
           from: ${{ secrets.EMAIL_FROM }}
-
+      
+      # Étape 3 : Email (Failure)
       - name: Email Failure
         if: failure()
         uses: dawidd6/action-send-mail@v3
