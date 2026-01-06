@@ -62,5 +62,5 @@ jobs:
       SMTP_PORT: ${{ secrets.SMTP_PORT }}
       SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
       SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
-      EMAIL_TO: ${{ secrets.EMAIL_TO }}
+      TEAM_EMAILS: ${{ secrets.TEAM_EMAILS }}
       EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
