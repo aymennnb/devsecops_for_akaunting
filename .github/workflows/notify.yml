@@ -53,7 +53,7 @@ jobs:
           secure: true
           subject: "CI/CD Notification - ${{ github.repository }}"
           body: |
-            ${{ job.status == 'success' && 'The CI/CD pipeline completed successfully.' || 'The CI/CD pipeline failed.' }}
+            ${{ job.status == 'success' && '🎉 The CI/CD pipeline completed successfully.' || '💥 The CI/CD pipeline failed.' }}
             
             🔗 Run URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
             
