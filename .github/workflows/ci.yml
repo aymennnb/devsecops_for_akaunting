@@ -38,7 +38,7 @@ jobs:
 
 
   build-image:
-    needs: [ sast-security ]
+    needs: [ build ]
     uses: ./.github/workflows/build-image.yml
     secrets: inherit
 
