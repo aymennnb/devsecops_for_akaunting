@@ -149,8 +149,8 @@ jobs:
             -severity medium,high,critical \
             -rate-limit 150 \
             -timeout 30 \
-            -o "GitHub Actions/DAST Security/Reports/Nuclei/nuclei-results.json" \
-            -json
+            -json-export "GitHub Actions/DAST Security/Reports/nuclei-results.json"
+    
       
       - name: Format JSON report
         run: |
