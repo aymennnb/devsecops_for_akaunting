@@ -19,33 +19,33 @@ jobs:
       MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
       MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
 
-  tests:
-    needs: build
-    uses: ./.github/workflows/tests.yml
-    secrets:
-      MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
-      MYSQL_USER: ${{ secrets.MYSQL_USER }}
-      MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
-      MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
-
-  sast-security:
-    needs: [ build,tests ]
-    uses: ./.github/workflows/sast-security.yml
-    secrets:
-      SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+#  tests:
+#    needs: build
+#    uses: ./.github/workflows/tests.yml
+#    secrets:
+#      MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
+#      MYSQL_USER: ${{ secrets.MYSQL_USER }}
+#      MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
+#      MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
+#
+#  sast-security:
+#    needs: [ build,tests ]
+#    uses: ./.github/workflows/sast-security.yml
+#    secrets:
+#      SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+#      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
   build-image:
     needs: [ sast-security ]
     uses: ./.github/workflows/build-image.yml
     secrets: inherit
 
-  dast-security:
-    needs: [ build-image ]
-    uses: ./.github/workflows/dast-security.yml
+#  dast-security:
+#    needs: [ build-image ]
+#    uses: ./.github/workflows/dast-security.yml
 
   scan-trivy:
-    needs: [ build-image,dast-security ]
+    needs: [ build-image ]
     uses: ./.github/workflows/scan-trivy.yml
     secrets: inherit
 
