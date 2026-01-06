@@ -48,7 +48,7 @@ jobs:
     uses: ./.github/workflows/scan-trivy.yml
     secrets: inherit
 
-  push-to-dockerhub:
+  push:
     needs: [ build-image, scan-trivy ]
-    uses: ./.github/workflows/push-to-dockerhub.yml
+    uses: ./.github/workflows/push-to-registry.yml
     secrets: inherit
