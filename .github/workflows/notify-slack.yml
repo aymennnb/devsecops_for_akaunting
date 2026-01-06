@@ -12,20 +12,16 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      - name: Notify Slack (success)
-        if: success()
+      - name: Notify Slack
         run: |
+          if [ "${{ job.status }}" == "success" ]; then
+            EMOJI="🎉"
+            STATUS="PASSED"
+          else
+            EMOJI="💥"
+            STATUS="FAILED"
+          fi
+          
           curl -X POST -H 'Content-type: application/json' \
-            --data "$(printf '{"text":"CI/CD SUCCESS: %s\nRun: %s"}' \
-            '${{ github.repository }}' \
-            'https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}')" \
-            ${{ secrets.SLACK_WEBHOOK_URL }}
-
-      - name: Notify Slack (failure)
-        if: failure()
-        run: |
-          curl -X POST -H 'Content-type: application/json' \
-            --data "$(printf '{"text":"CI/CD FAILURE: %s\nRun: %s"}' \
-            '${{ github.repository }}' \
-            'https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}')" \
+            --data "{\"text\":\"${EMOJI} ${{ github.repository }} | ${{ github.ref_name }} | ${STATUS}\n<https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|Details>\"}" \
             ${{ secrets.SLACK_WEBHOOK_URL }}
