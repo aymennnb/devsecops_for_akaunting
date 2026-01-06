@@ -8,6 +8,7 @@ on:
       IMAGE_TAG_COMMIT:
         required: true
 
+
 jobs:
   owasp-zap-dast:
     name: DAST Security with OWASP ZAP
