@@ -7,6 +7,7 @@ on:
         required: true
 
 jobs:
+
   semgrep-sast:
     name: SAST Security with Semgrep
     runs-on: ubuntu-latest
@@ -86,3 +87,40 @@ jobs:
         with:
           args: --severity-threshold=high
           command: monitor
+
+  sonarcloud-sast:
+    name: SonarCloud Fast Analysis
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Find smallest PHP file
+        run: |
+          echo "=== Recherche du plus petit fichier PHP ==="
+          find app/Http/Controllers -name "*.php" -type f -exec wc -l {} \; | sort -n | head -5
+          mkdir -p minimal-scan
+          if [ -f "app/Http/Controllers/HomeController.php" ]; then
+            cp app/Http/Controllers/HomeController.php minimal-scan/
+          else
+            FIRST_FILE=$(find app/Http/Controllers -name "*.php" | head -1)
+            cp "$FIRST_FILE" minimal-scan/
+          fi
+          echo "Fichier copié :"
+          ls -la minimal-scan/
+
+      - name: SonarQube Single File Scan
+        uses: SonarSource/sonarqube-scan-action@v6
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.organization=aymennnb
+            -Dsonar.projectKey=aymennnb_devsecops_for_akaunting
+            -Dsonar.sources=minimal-scan
+            -Dsonar.sourceEncoding=UTF-8
+            -Dsonar.analysis.automaticAnalysis.disabled=true
+            -Dsonar.qualitygate.wait=false

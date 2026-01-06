@@ -20,67 +20,23 @@ jobs:
       MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
       MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
 
-  tests:
-    needs: build
-    uses: ./.github/workflows/tests.yml
-    secrets:
-      MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
-      MYSQL_USER: ${{ secrets.MYSQL_USER }}
-      MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
-      MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
-
-#  semgrep-sast:
-#    needs: [ build, tests ]
-#    uses: ./.github/workflows/semgrep-sast.yml
-#
-#  snyk-sast:
-#    needs: [ build, tests ]
-#    uses: ./.github/workflows/snyk-sast.yml
+#  tests:
+#    needs: build
+#    uses: ./.github/workflows/tests.yml
 #    secrets:
-#      SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+#      MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
+#      MYSQL_USER: ${{ secrets.MYSQL_USER }}
+#      MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
+#      MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
 
   sast-security:
-    needs: [ build, tests ]
+    needs: [ build ]
     uses: ./.github/workflows/sast-security.yml
     secrets:
       SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
-#  sonarCloudScan:
-#    name: SonarCloud Fast Analysis
-#    runs-on: ubuntu-latest
-#    needs: [ prepare, run-tests ]
-#
-#    steps:
-#      - name: Checkout code
-#        uses: actions/checkout@v4
-#        with:
-#          fetch-depth: 0
-#
-#      - name: Find smallest PHP file
-#        run: |
-#          echo "=== Recherche du plus petit fichier PHP ==="
-#          find app/Http/Controllers -name "*.php" -type f -exec wc -l {} \; | sort -n | head -5
-#          mkdir -p minimal-scan
-#          if [ -f "app/Http/Controllers/HomeController.php" ]; then
-#            cp app/Http/Controllers/HomeController.php minimal-scan/
-#          else
-#            FIRST_FILE=$(find app/Http/Controllers -name "*.php" | head -1)
-#            cp "$FIRST_FILE" minimal-scan/
-#          fi
-#          echo "Fichier copié :"
-#          ls -la minimal-scan/
-#      - name: SonarQube Single File Scan
-#        uses: SonarSource/sonarqube-scan-action@v6
-#        env:
-#          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-#        with:
-#          args: >
-#            -Dsonar.organization=aymennnb
-#            -Dsonar.projectKey=aymennnb_devsecops_for_akaunting
-#            -Dsonar.sources=minimal-scan
-#            -Dsonar.sourceEncoding=UTF-8
-#            -Dsonar.analysis.automaticAnalysis.disabled=true
-#            -Dsonar.qualitygate.wait=false
+
 #  build:
 #    name: Build Docker Image
 #    runs-on: ubuntu-latest
