@@ -1,0 +1,90 @@
+name: DAST Security with OWASP ZAP
+
+on:
+  workflow_call:
+    vars:
+      DOCKER_IMAGE_NAME:
+        required: true
+      IMAGE_TAG_COMMIT:
+        required: true
+
+jobs:
+  owasp-zap-dast:
+    name: DAST Security with OWASP ZAP
+    runs-on: ubuntu-latest
+    continue-on-error: true
+
+    env:
+      DOCKER_IMAGE_NAME: ${{ vars.DOCKER_IMAGE_NAME }}
+      IMAGE_TAG_COMMIT: ${{ vars.IMAGE_TAG_COMMIT }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create directories
+        run: |
+          mkdir -p "GitHub Actions/DAST Security/Reports"
+      
+      - name: Download Docker image artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image-${{ env.DOCKER_IMAGE_NAME }}-${{ github.sha }}
+          path: ./
+
+      - name: Load Docker image
+        run: |
+          echo "=== Loading Docker image ==="
+          docker load -i docker-image.tar
+          echo "== Docker image loaded =="
+          docker images | grep ${{ env.DOCKER_IMAGE_NAME }}
+      
+      - name: Start Docker container
+        run: |
+          echo "=== Starting Docker container ==="
+          docker run -d \
+            --name akaunting-app \
+            -p 8080:80 \
+            ${{ env.IMAGE_TAG_COMMIT }}
+          echo "== Container started =="
+          sleep 10
+          docker ps
+      
+      - name: Wait for application to be ready
+        run: |
+          echo "=== Waiting for application to be ready ==="
+          for i in {1..30}; do
+            if curl -s http://localhost:8080 > /dev/null; then
+              echo "Application is ready!"
+              exit 0
+            fi
+            echo "Waiting... (attempt $i/30)"
+            sleep 2
+          done
+          echo "Application did not respond in time"
+          exit 1
+      
+      - name: Run OWASP ZAP scan
+        uses: zaproxy/action-full-scan@v0.7.0
+        with:
+          target: "http://localhost:8080"
+          cmd_options: "-a"
+        continue-on-error: true
+
+      - name: Upload ZAP scan results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-scan-results-${{ github.sha }}
+          path: |
+            report_md.md
+            report_html.html
+            report_json.json
+          retention-days: 7
+
+      - name: Stop Docker container
+        if: always()
+        run: |
+          echo "=== Stopping Docker container ==="
+          docker stop akaunting-app
+          docker rm akaunting-app

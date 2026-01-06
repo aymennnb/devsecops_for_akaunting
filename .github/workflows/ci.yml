@@ -12,13 +12,13 @@ on:
 
 jobs:
 
-  # build:
-  #   uses: ./.github/workflows/build.yml
-  #   secrets:
-  #     MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
-  #     MYSQL_USER: ${{ secrets.MYSQL_USER }}
-  #     MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
-  #     MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
+  build:
+    uses: ./.github/workflows/build.yml
+    secrets:
+      MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
+      MYSQL_USER: ${{ secrets.MYSQL_USER }}
+      MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
+      MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
 
 #  tests:
 #    needs: build
@@ -37,10 +37,17 @@ jobs:
 #      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
 
-  # build-image:
-  #   needs: [ build ]
-  #   uses: ./.github/workflows/build-image.yml
-  #   secrets: inherit
+  build-image:
+    needs: [ build ]
+    uses: ./.github/workflows/build-image.yml
+    secrets: inherit
+
+  dast-security:
+    needs: [ build-image ]
+    uses: ./.github/workflows/dast-security.yml
+    vars:
+      DOCKER_IMAGE_NAME: ${{ vars.DOCKER_IMAGE_NAME }}
+      IMAGE_TAG_COMMIT: ${{ vars.DOCKER_IMAGE_NAME}}:${{ github.sha }}
 
 
   # scan-trivy:
@@ -54,7 +61,7 @@ jobs:
   #   secrets: inherit
   
   notify:
-    # needs: [build]
+    needs: [dast-security]
     uses: ./.github/workflows/notify.yml
     secrets:
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
