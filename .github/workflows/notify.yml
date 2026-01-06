@@ -43,24 +43,11 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      - name: Email: Success
-        if: success()
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: ${{ secrets.SMTP_SERVER }}
-          server_port: ${{ secrets.SMTP_PORT }}
-          username: ${{ secrets.SMTP_USERNAME }}
-          password: ${{ secrets.SMTP_PASSWORD }}
-          secure: true
-          subject: "🎉 CI/CD Success: ${{ github.repository }}"
-          body: |
-            The CI/CD pipeline for ${{ github.repository }} completed successfully.
-            Run URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          to: ${{ secrets.EMAIL_TO }}
-          from: ${{ secrets.EMAIL_FROM }}
+      - name: Prepare commit SHA
+        id: sha
+        run: echo "short_sha=${GITHUB_SHA:0:7}" >> $GITHUB_OUTPUT
 
-      - name: Email: Failure
-        if: failure()
+      - name: Send Email Notification
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: ${{ secrets.SMTP_SERVER }}
@@ -68,9 +55,22 @@ jobs:
           username: ${{ secrets.SMTP_USERNAME }}
           password: ${{ secrets.SMTP_PASSWORD }}
           secure: true
-          subject: "💥 CI/CD Failure: ${{ github.repository }}"
+          subject: |
+            ${{ job.status == 'success' && '🎉 CI/CD Success:' || '💥 CI/CD Failure:' }} ${{ github.repository }}
           body: |
-            The CI/CD pipeline for ${{ github.repository }} failed.
-            Run URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            ${{ job.status == 'success' && 'The CI/CD pipeline completed successfully.' || 'The CI/CD pipeline failed.' }}
+            
+            🔗 Run URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            
+            📋 Details:
+            - Repository: ${{ github.repository }}
+            - Branch: ${{ github.ref_name }}
+            - Commit: ${{ steps.sha.outputs.short_sha }}
+            - Triggered by: ${{ github.actor }}
+            - Workflow: ${{ github.workflow }}
+            ${{ job.status == 'failure' && '- Status: FAILED - Please check the workflow logs for details.' || '' }}
+            
+            ---
+            This is an automated notification from GitHub Actions.
           to: ${{ secrets.EMAIL_TO }}
           from: ${{ secrets.EMAIL_FROM }}
