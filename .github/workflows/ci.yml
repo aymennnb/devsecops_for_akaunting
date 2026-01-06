@@ -12,7 +12,7 @@ on:
 
 jobs:
   prepare:
-    uses: ./.github/workflows/jobs/prepare.yml
+    uses: ./.github/workflows/prepare.yml
     secrets:
       MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
       MYSQL_USER: ${{ secrets.MYSQL_USER }}
@@ -118,7 +118,7 @@ jobs:
 
   snyk-sast:
     needs: prepare
-    uses: ./.github/workflows/jobs/snyk-sast.yml
+    uses: ./.github/workflows/snyk-sast.yml
     secrets:
       SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
