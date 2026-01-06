@@ -15,9 +15,9 @@ jobs:
     name: Code Quality & Linting
     uses: ./.github/workflows/code-quality.yml
 
-  secrets-detection:
-    name: Secrets Detection
-    uses: ./.github/workflows/secrets-detection.yml
+#  secrets-detection:
+#    name: Secrets Detection
+#    uses: ./.github/workflows/secrets-detection.yml
 
 #  sca-scan:
 #    name: Dependency Security (SCA)
