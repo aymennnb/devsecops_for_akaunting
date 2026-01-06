@@ -70,6 +70,7 @@ jobs:
           to: ${{ secrets.EMAIL_TO }}
           from: ${{ secrets.EMAIL_FROM }}
       
+      
       # Étape 3 : Email (Failure)
       - name: Email Failure
         if: failure()
