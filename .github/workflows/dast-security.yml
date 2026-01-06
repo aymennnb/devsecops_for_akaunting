@@ -84,7 +84,7 @@ jobs:
   #         docker stop akaunting-app
   #         docker rm akaunting-app
 
-nuclei-dast:
+  nuclei-dast:
     name: DAST Security with Nuclei
     runs-on: ubuntu-latest
     needs: owasp-zap-dast
