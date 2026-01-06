@@ -3,7 +3,7 @@ name: Notify Slack
 on:
   workflow_call:
     secrets:
-      SNYK_TOKEN:
+      SLACK_WEBHOOK_URL:
         required: true
 
 jobs:
