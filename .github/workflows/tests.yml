@@ -74,12 +74,16 @@ jobs:
             sed -i "s/DB_USERNAME=.*/DB_USERNAME=${{ secrets.MYSQL_USER }}/" .env.testing
             sed -i "s/DB_PASSWORD=.*/DB_PASSWORD=${{ secrets.MYSQL_PASSWORD }}/" .env.testing
 
-      - name: Wait for MySQL
+      - name: Wait for MySQL to be ready
+        env:
+          MYSQL_PWD: ${{ env.MYSQL_PASSWORD }}
         run: |
-          until nc -z 127.0.0.1 3306; do
-            echo "Attente de MySQL..."
-            sleep 1
+          echo "== Attente de MySQL... =="
+          until mysqladmin -h 127.0.0.1 -u${{ env.MYSQL_USER }} ping 2>/dev/null; do
+            echo "En attente de MySQL..."
+            sleep 2
           done
+          echo "== MySQL est prêt =="
 
       - name: Run Migrations
         run: php artisan migrate --env=testing
