@@ -36,7 +36,7 @@ jobs:
 #      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
   build-image:
-    needs: [ sast-security ]
+    needs: [ build ]
     uses: ./.github/workflows/build-image.yml
     secrets: inherit
 
@@ -50,7 +50,7 @@ jobs:
     secrets: inherit
 
   push:
-    needs: [ build-image, sast-security, dast-security, scan-trivy ]
+    needs: [ build-image,scan-trivy ]
     uses: ./.github/workflows/push-to-registry.yml
     secrets: inherit
 
