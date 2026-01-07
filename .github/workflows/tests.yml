@@ -96,22 +96,22 @@ jobs:
       - name: Run unit tests
         id: run-unit-tests
         run: |
-          echo "== Lancement des tests unitaires (JSON) == "
-          vendor/bin/phpunit --testsuite Unit --log-json unit-report.json
+          echo "== Lancement des tests unitaires == "
+          vendor/bin/phpunit --testsuite Unit --log-junit unit-report.xml
         continue-on-error: true
 
       - name: Run feature tests
         id: run-feature-tests
         run: |
-          echo "== Lancement des tests fonctionnels (JSON) == "
-          vendor/bin/phpunit --testsuite Feature --log-json feature-report.json
+          echo "== Lancement des tests fonctionnels == "
+          vendor/bin/phpunit --testsuite Feature --log-junit feature-report.xml
         continue-on-error: true
 
       - name: Upload Test Reports
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: phpunit-reports-json
+          name: phpunit-reports
           path: |
-            unit-report.json
-            feature-report.json
+            unit-report.xml
+            feature-report.xml
