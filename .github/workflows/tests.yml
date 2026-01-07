@@ -26,7 +26,6 @@ jobs:
   execute-tests:
     name: Run PHPUnit Tests
     runs-on: ubuntu-latest
-    continue-on-error: true
 
     services:
       mysql:
@@ -36,8 +35,14 @@ jobs:
           MYSQL_USER: ${{ secrets.MYSQL_USER }}
           MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
           MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
-
+        ports:
+          - 3306:3306
         options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
+    outputs:
+      tests-passed: ${{ steps.run-unit-tests.outcome == 'success' && steps.run-feature-tests.outcome == 'success' }}
+      unit-report: unit-report.json
+      feature-report: feature-report.json
 
     steps:
       - name: Checkout code
@@ -47,6 +52,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
+          extensions: mbstring, xml, ctype, iconv, mysql, pdo_mysql
 
       - name: Restore Composer dependencies
         uses: actions/cache@v3
@@ -58,41 +64,47 @@ jobs:
         run: |
           if [ ! -d "vendor" ]; then
             echo "== Installation des dépendances Composer... =="
-            composer install --no-scripts
+            composer install --no-scripts --no-progress --prefer-dist
           else
             echo "== Utilisation du cache Composer =="
           fi
 
       - name: Setup test environment
         run: |
-            cp .env.example .env.testing
-            php artisan key:generate --env=testing
-            sed -i "s/DB_CONNECTION=.*/DB_CONNECTION=mysql/" .env.testing
-            sed -i "s/DB_HOST=.*/DB_HOST=127.0.0.1/" .env.testing
-            sed -i "s/DB_PORT=.*/DB_PORT=3306/" .env.testing
-            sed -i "s/DB_DATABASE=.*/DB_DATABASE=${{ secrets.MYSQL_DATABASE }}/" .env.testing
-            sed -i "s/DB_USERNAME=.*/DB_USERNAME=${{ secrets.MYSQL_USER }}/" .env.testing
-            sed -i "s/DB_PASSWORD=.*/DB_PASSWORD=${{ secrets.MYSQL_PASSWORD }}/" .env.testing
+          echo "== Configuration du fichier .env.testing =="
+          cp .env.example .env.testing
+          php artisan key:generate --env=testing
+          sed -i "s/DB_CONNECTION=.*/DB_CONNECTION=mysql/" .env.testing
+          sed -i "s/DB_HOST=.*/DB_HOST=127.0.0.1/" .env.testing
+          sed -i "s/DB_PORT=.*/DB_PORT=3306/" .env.testing
+          sed -i "s/DB_DATABASE=.*/DB_DATABASE=${{ secrets.MYSQL_DATABASE }}/" .env.testing
+          sed -i "s/DB_USERNAME=.*/DB_USERNAME=${{ secrets.MYSQL_USER }}/" .env.testing
+          sed -i "s/DB_PASSWORD=.*/DB_PASSWORD=${{ secrets.MYSQL_PASSWORD }}/" .env.testing
+          # Désactive les interactions console
+          echo "APP_ENV=testing" >> .env.testing
 
       - name: Wait for MySQL to be ready
-        env:
-          MYSQL_PWD: ${{ env.MYSQL_PASSWORD }}
         run: |
-          echo "== Attente de MySQL... =="
-          until mysqladmin -h 127.0.0.1 -u${{ env.MYSQL_USER }} ping 2>/dev/null; do
-            echo "En attente de MySQL..."
-            sleep 2
-          done
-          echo "== MySQL est prêt =="
+          echo "== Attente de la disponibilité du port 3306... =="
+          # Utilise netcat pour vérifier que le port est ouvert sur 127.0.0.1
+          timeout 60s sh -c 'until nc -z 127.0.0.1 3306; do echo "En attente..."; sleep 2; done'
+          echo "== MySQL est prêt sur le port 3306 =="
 
       - name: Run Migrations
-        run: php artisan migrate --env=testing
+        run: php artisan migrate --env=testing --force
 
       - name: Run unit tests
         id: run-unit-tests
         run: |
-            echo "== Lancement des tests unitaires (JSON) == "
-            vendor/bin/phpunit --testsuite Unit --log-json unit-report.json
+          echo "== Lancement des tests unitaires (JSON) == "
+          vendor/bin/phpunit --testsuite Unit --log-json unit-report.json
+        continue-on-error: true
+
+      - name: Run feature tests
+        id: run-feature-tests
+        run: |
+          echo "== Lancement des tests fonctionnels (JSON) == "
+          vendor/bin/phpunit --testsuite Feature --log-json feature-report.json
         continue-on-error: true
 
       - name: Upload Test Reports
