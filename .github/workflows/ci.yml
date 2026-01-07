@@ -26,7 +26,7 @@ jobs:
     uses: ./.github/workflows/secret-detection.yml
 
   tests:
-    needs: build
+    needs: secret-detection
     uses: ./.github/workflows/tests.yml
     secrets:
       MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
@@ -35,7 +35,7 @@ jobs:
       MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
 
   sast-security:
-    needs: [ tests,secret-detection ]
+    needs: [ tests ]
     uses: ./.github/workflows/sast-security.yml
     secrets:
       SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
