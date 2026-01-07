@@ -35,7 +35,7 @@ jobs:
       MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
 
   sast-security:
-    needs: [ build,tests ]
+    needs: [ tests,secret-detection ]
     uses: ./.github/workflows/sast-security.yml
     secrets:
       SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
