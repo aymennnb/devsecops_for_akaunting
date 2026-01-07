@@ -56,7 +56,10 @@ jobs:
 
   notify:
     needs: [build]
+    if: always()
     uses: ./.github/workflows/notify.yml
+    with:
+      job_status: ${{ needs.build-and-test.result }}
     secrets:
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
       SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
