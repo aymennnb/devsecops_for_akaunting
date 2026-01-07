@@ -27,6 +27,7 @@ jobs:
           docker load -i docker-image.tar
           echo "== Images chargées =="
           docker images
+
       - name: Set Date
         id: set-date
         run: echo "DATE=$(date +%m.%d.%Y)" >> $GITHUB_ENV
@@ -39,6 +40,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y curl
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sudo sh -s -- -b /usr/local/bin v0.57.0
+
       - name: Download Trivy vulnerability database
         run: trivy image --download-db-only
 
@@ -46,7 +48,8 @@ jobs:
         run: |
           OUTPUT_FILE="GitHub Actions/Trivy Automation/scan-results-${DATE}.json"
           mkdir -p "GitHub Actions/Trivy Automation"
-          trivy image --format json --ignore-unfixed --skip-files --vuln-type os,library --severity CRITICAL,HIGH,MEDIUM,LOW -o "$OUTPUT_FILE" ${{ env.DOCKER_IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+          trivy image --format json --ignore-unfixed --vuln-type os,library --severity CRITICAL,HIGH,MEDIUM,LOW -o "$OUTPUT_FILE" ${{ env.DOCKER_IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+
       - name: Upload scan results as artifact
         uses: actions/upload-artifact@v4
         with:
