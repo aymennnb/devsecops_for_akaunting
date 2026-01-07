@@ -1,7 +1,12 @@
-name: Notify Slack
+name: Notify Slack and Email
 
 on:
   workflow_call:
+    inputs:
+      job_status:
+        required: true
+        type: string
+        description: "Status of the previous workflow jobs (success/failure)"
     secrets:
       SLACK_WEBHOOK_URL:
         required: true
@@ -20,30 +25,55 @@ on:
 
 jobs:
   notify:
-    name: Send Slack Notification
+    name: Send Notifications
     runs-on: ubuntu-latest
-    
     steps:
-      - name: Notify Slack
+      - name: Prepare Notification Data
+        id: data
         run: |
-          if [ "${{ job.status }}" == "success" ]; then
-            EMOJI="🎉"
-            STATUS="PASSED"
+          # Définition des icônes et couleurs selon le statut reçu en input
+          if [ "${{ inputs.job_status }}" == "success" ]; then
+            echo "EMOJI=🎉" >> $GITHUB_OUTPUT
+            echo "COLOR=good" >> $GITHUB_OUTPUT # Vert pour Slack
+            echo "STATUS_MSG=Succès" >> $GITHUB_OUTPUT
           else
-            EMOJI="💥"
-            STATUS="FAILED"
+            echo "EMOJI=🚨" >> $GITHUB_OUTPUT
+            echo "COLOR=danger" >> $GITHUB_OUTPUT # Rouge pour Slack
+            echo "STATUS_MSG=Échec" >> $GITHUB_OUTPUT
           fi
-          
+
+          # Nettoyage du message de commit pour éviter de casser le JSON (échappement des guillemets)
+          COMMIT_MSG=$(echo "${{ github.event.head_commit.message }}" | sed 's/"/\\"/g' | head -n 1)
+          echo "COMMIT_CLEAN=$COMMIT_MSG" >> $GITHUB_OUTPUT
+
+      - name: Notify Slack (Rich Message)
+        run: |
+          # Construction d'un message Slack riche avec "attachments"
           curl -X POST -H 'Content-type: application/json' \
-            --data "{\"text\":\"${EMOJI} ${{ github.repository }} | ${{ github.ref_name }} | ${STATUS}\n<https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|Details>\"}" \
+            --data "{
+              \"attachments\": [
+                {
+                  \"color\": \"${{ steps.data.outputs.COLOR }}\",
+                  \"pretext\": \"${{ steps.data.outputs.EMOJI }} Notification Pipeline: ${{ github.repository }}\",
+                  \"fields\": [
+                    { \"title\": \"Status\", \"value\": \"${{ steps.data.outputs.STATUS_MSG }}\", \"short\": true },
+                    { \"title\": \"Branch\", \"value\": \"${{ github.ref_name }}\", \"short\": true },
+                    { \"title\": \"Triggered By\", \"value\": \"${{ github.actor }}\", \"short\": true },
+                    { \"title\": \"Commit\", \"value\": \"${{ steps.data.outputs.COMMIT_CLEAN }}\", \"short\": false }
+                  ],
+                  \"actions\": [
+                    {
+                      \"type\": \"button\",
+                      \"text\": \"Voir les logs\",
+                      \"url\": \"https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"
+                    }
+                  ]
+                }
+              ]
+            }" \
             ${{ secrets.SLACK_WEBHOOK_URL }}
-  
-  send-team-email:
-    name: Send Email to Team
-    runs-on: ubuntu-latest
-    
-    steps:
-      - name: Send Team Notification
+
+      - name: Send Team Email (HTML)
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: ${{ secrets.SMTP_SERVER }}
@@ -51,21 +81,24 @@ jobs:
           username: ${{ secrets.SMTP_USERNAME }}
           password: ${{ secrets.SMTP_PASSWORD }}
           secure: true
-          subject: "CI/CD Notification - ${{ github.repository }}"
-          body: |
-            ${{ job.status == 'success' && '🎉 The CI/CD pipeline completed successfully.' || '💥 The CI/CD pipeline failed.' }}
-            
-            🔗 Run URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-            
-            📋 Details:
-            - Repository: ${{ github.repository }}
-            - Branch: ${{ github.ref_name }}
-            - Commit: ${{ steps.sha.outputs.short_sha }}
-            - Triggered by: ${{ github.actor }}
-            - Workflow: ${{ github.workflow }}
-            ${{ job.status == 'failure' && '- Status: FAILED - Please check the workflow logs for details.' || '' }}
-            
-            ---
-            This is an automated notification from GitHub Actions.
+          subject: "[${{ steps.data.outputs.STATUS_MSG }}] CI/CD Report - ${{ github.repository }}"
+          html_body: |
+            <h3>${{ steps.data.outputs.EMOJI }} Pipeline ${{ steps.data.outputs.STATUS_MSG }}</h3>
+            <p>Le pipeline pour le dépôt <b>${{ github.repository }}</b> a terminé son exécution.</p>
+
+            <table border="1" cellpadding="5" style="border-collapse: collapse;">
+              <tr><td><b>Branche</b></td><td>${{ github.ref_name }}</td></tr>
+              <tr><td><b>Auteur</b></td><td>${{ github.actor }}</td></tr>
+              <tr><td><b>Commit</b></td><td>${{ steps.data.outputs.COMMIT_CLEAN }}</td></tr>
+              <tr><td><b>SHA</b></td><td>${{ github.sha }}</td></tr>
+            </table>
+
+            <br/>
+            <a href="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" style="background-color: #2da44e; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+              Voir les détails sur GitHub
+            </a>
+            <br/><br/>
+            <hr>
+            <small>Automated notification via GitHub Actions</small>
           to: ${{ secrets.TEAM_EMAILS }}
           from: ${{ secrets.EMAIL_FROM }}
