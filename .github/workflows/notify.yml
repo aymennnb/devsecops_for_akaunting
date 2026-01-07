@@ -1,39 +1,7 @@
-name: Notify Slack and Email
+name: Notify Slack
 
 on:
   workflow_call:
-    inputs:
-      workflow_result:
-        required: true
-        type: string
-      build_status:
-        required: false
-        type: string
-        default: 'skipped'
-      test_status:
-        required: false
-        type: string
-        default: 'skipped'
-      sast_status:
-        required: false
-        type: string
-        default: 'skipped'
-      image_status:
-        required: false
-        type: string
-        default: 'skipped'
-      dast_status:
-        required: false
-        type: string
-        default: 'skipped'
-      scan_status:
-        required: false
-        type: string
-        default: 'skipped'
-      push_status:
-        required: false
-        type: string
-        default: 'skipped'
     secrets:
       SLACK_WEBHOOK_URL:
         required: true
@@ -52,77 +20,30 @@ on:
 
 jobs:
   notify:
-    name: Send Detailed Notifications
+    name: Send Slack Notification
     runs-on: ubuntu-latest
+
     steps:
-      - name: Prepare Status Icons
-        id: status
-        shell: bash
-        run: |
-          get_icon() {
-            case "$1" in
-              success) echo "🎉";;
-              failure) echo "🚨";;
-              cancelled) echo "🚫";;
-              skipped) echo "⏭️";;
-              *) echo " ";;
-            esac
-          }
-
-          # On définit les icônes pour chaque étape
-          echo "ICON_BUILD=$(get_icon ${{ inputs.build_status }})" >> $GITHUB_OUTPUT
-          echo "ICON_TEST=$(get_icon ${{ inputs.test_status }})" >> $GITHUB_OUTPUT
-          echo "ICON_SAST=$(get_icon ${{ inputs.sast_status }})" >> $GITHUB_OUTPUT
-          echo "ICON_IMAGE=$(get_icon ${{ inputs.image_status }})" >> $GITHUB_OUTPUT
-          echo "ICON_DAST=$(get_icon ${{ inputs.dast_status }})" >> $GITHUB_OUTPUT
-          echo "ICON_SCAN=$(get_icon ${{ inputs.scan_status }})" >> $GITHUB_OUTPUT
-          echo "ICON_PUSH=$(get_icon ${{ inputs.push_status }})" >> $GITHUB_OUTPUT
-
-          # Gestion de la couleur et message global
-          if [ "${{ inputs.workflow_result }}" == "success" ]; then
-             echo "SLACK_COLOR=good" >> $GITHUB_OUTPUT
-             echo "GLOBAL_MSG=Succès du Pipeline" >> $GITHUB_OUTPUT
-             echo "GLOBAL_ICON=🎉" >> $GITHUB_OUTPUT
-          else
-             echo "SLACK_COLOR=danger" >> $GITHUB_OUTPUT
-             echo "GLOBAL_MSG=Échec du Pipeline" >> $GITHUB_OUTPUT
-             echo "GLOBAL_ICON=🚨" >> $GITHUB_OUTPUT
-          fi
-
-          CLEAN_MSG=$(echo "${{ github.event.head_commit.message }}" | sed 's/"/\\"/g' | head -n 1)
-          echo "COMMIT_MSG=$CLEAN_MSG" >> $GITHUB_OUTPUT
-
       - name: Notify Slack
         run: |
+          if [ "${{ job.status }}" == "success" ]; then
+            EMOJI="🎉"
+            STATUS="PASSED"
+          else
+            EMOJI="🚨"
+            STATUS="FAILED"
+          fi
+
           curl -X POST -H 'Content-type: application/json' \
-            --data "{
-              \"attachments\": [
-                {
-                  \"color\": \"${{ steps.status.outputs.SLACK_COLOR }}\",
-                  \"pretext\": \"${{ steps.status.outputs.GLOBAL_ICON }} Report: ${{ github.repository }}\",
-                  \"fields\": [
-                    { \"title\": \"Build\", \"value\": \"${{ steps.status.outputs.ICON_BUILD }} ${{ inputs.build_status }}\", \"short\": true },
-                    { \"title\": \"Tests\", \"value\": \"${{ steps.status.outputs.ICON_TEST }} ${{ inputs.test_status }}\", \"short\": true },
-                    { \"title\": \"SAST Security\", \"value\": \"${{ steps.status.outputs.ICON_SAST }} ${{ inputs.sast_status }}\", \"short\": true },
-                    { \"title\": \"Docker Build\", \"value\": \"${{ steps.status.outputs.ICON_IMAGE }} ${{ inputs.image_status }}\", \"short\": true },
-                    { \"title\": \"DAST Security\", \"value\": \"${{ steps.status.outputs.ICON_DAST }} ${{ inputs.dast_status }}\", \"short\": true },
-                    { \"title\": \"Trivy Scan\", \"value\": \"${{ steps.status.outputs.ICON_SCAN }} ${{ inputs.scan_status }}\", \"short\": true },
-                    { \"title\": \"Push Registry\", \"value\": \"${{ steps.status.outputs.ICON_PUSH }} ${{ inputs.push_status }}\", \"short\": true }
-                  ],
-                  \"footer\": \"Commit: ${{ steps.status.outputs.COMMIT_MSG }} | By: ${{ github.actor }}\",
-                  \"actions\": [
-                    {
-                      \"type\": \"button\",
-                      \"text\": \"🔍 Voir les Logs\",
-                      \"url\": \"https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"
-                    }
-                  ]
-                }
-              ]
-            }" \
+            --data "{\"text\":\"${EMOJI} ${{ github.repository }} | ${{ github.ref_name }} | ${STATUS}\n<https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|Details>\"}" \
             ${{ secrets.SLACK_WEBHOOK_URL }}
 
-      - name: Send Email Report
+  send-team-email:
+    name: Send Email to Team
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Send Team Notification
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: ${{ secrets.SMTP_SERVER }}
@@ -130,23 +51,21 @@ jobs:
           username: ${{ secrets.SMTP_USERNAME }}
           password: ${{ secrets.SMTP_PASSWORD }}
           secure: true
-          subject: "${{ steps.status.outputs.GLOBAL_ICON }} DevSecOps Report - ${{ github.repository }}"
-          html_body: |
-            <h2>${{ steps.status.outputs.GLOBAL_ICON }} Rapport d'exécution du Pipeline</h2>
-            <p>Branche: <b>${{ github.ref_name }}</b> | Commit: ${{ steps.status.outputs.COMMIT_MSG }}</p>
+          subject: "CI/CD Notification - ${{ github.repository }}"
+          body: |
+            ${{ job.status == 'success' && '🎉 The CI/CD pipeline completed successfully.' || '🚨 The CI/CD pipeline failed.' }}
 
-            <table border="1" cellpadding="8" style="border-collapse: collapse; width: 100%;">
-              <tr style="background-color: #f2f2f2;"><th>Étape</th><th>Statut</th><th>Détails</th></tr>
-              <tr><td>Build App</td><td>${{ steps.status.outputs.ICON_BUILD }}</td><td>${{ inputs.build_status }}</td></tr>
-              <tr><td>Tests Unitaires</td><td>${{ steps.status.outputs.ICON_TEST }}</td><td>${{ inputs.test_status }}</td></tr>
-              <tr><td>SAST (Code)</td><td>${{ steps.status.outputs.ICON_SAST }}</td><td>${{ inputs.sast_status }}</td></tr>
-              <tr><td>Build Image</td><td>${{ steps.status.outputs.ICON_IMAGE }}</td><td>${{ inputs.image_status }}</td></tr>
-              <tr><td>DAST (Web)</td><td>${{ steps.status.outputs.ICON_DAST }}</td><td>${{ inputs.dast_status }}</td></tr>
-              <tr><td>Trivy Scan</td><td>${{ steps.status.outputs.ICON_SCAN }}</td><td>${{ inputs.scan_status }}</td></tr>
-              <tr><td>Push Registry</td><td>${{ steps.status.outputs.ICON_PUSH }}</td><td>${{ inputs.push_status }}</td></tr>
-            </table>
+            🔗 Run URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
-            <br/>
-            <a href="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}">Accéder au rapport complet sur GitHub</a>
+            📋 Details:
+            - Repository: ${{ github.repository }}
+            - Branch: ${{ github.ref_name }}
+            - Commit: ${{ steps.sha.outputs.short_sha }}
+            - Triggered by: ${{ github.actor }}
+            - Workflow: ${{ github.workflow }}
+            ${{ job.status == 'failure' && '- Status: FAILED - Please check the workflow logs for details.' || '' }}
+
+            ---
+            This is an automated notification from GitHub Actions.
           to: ${{ secrets.TEAM_EMAILS }}
           from: ${{ secrets.EMAIL_FROM }}

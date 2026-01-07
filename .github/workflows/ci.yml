@@ -5,6 +5,8 @@ permissions:
   actions: read
   checks: write
   security-events: write
+  issues: write
+  pull-requests: write
 
 on:
   push:
@@ -18,16 +20,16 @@ jobs:
       MYSQL_USER: ${{ secrets.MYSQL_USER }}
       MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
       MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
-#
-#  tests:
-#    needs: build
-#    uses: ./.github/workflows/tests.yml
-#    secrets:
-#      MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
-#      MYSQL_USER: ${{ secrets.MYSQL_USER }}
-#      MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
-#      MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
-#
+
+  tests:
+    needs: build
+    uses: ./.github/workflows/tests.yml
+    secrets:
+      MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
+      MYSQL_USER: ${{ secrets.MYSQL_USER }}
+      MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
+      MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
+
 #  sast-security:
 #    needs: [ build,tests ]
 #    uses: ./.github/workflows/sast-security.yml
@@ -55,11 +57,8 @@ jobs:
 #    secrets: inherit
 
   notify:
-    needs: [build]
-    if: always()
+    needs: [tests]
     uses: ./.github/workflows/notify.yml
-    with:
-      job_status: ${{ needs.build-and-test.result }}
     secrets:
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
       SMTP_SERVER: ${{ secrets.SMTP_SERVER }}

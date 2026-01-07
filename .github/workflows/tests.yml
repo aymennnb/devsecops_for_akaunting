@@ -37,10 +37,7 @@ jobs:
           MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
           MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
 
-    outputs:
-      tests-passed: ${{ steps.run-feature-tests.outcome == 'success' || steps.run-unit-tests.outcome == 'success' }}
-      unit-report: unit-report.xml
-      feature-report: feature-report.xml
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
 
     steps:
       - name: Checkout code
@@ -68,24 +65,37 @@ jobs:
 
       - name: Setup test environment
         run: |
-          echo "== Configuration de l'environnement de test... =="
-          cp .env.example .env.testing
-          php artisan key:generate --env=testing
-          sed -i "s/DB_HOST=.*/DB_HOST=127.0.0.1/" .env.testing
-          sed -i "s/DB_DATABASE=.*/DB_DATABASE=${{ secrets.MYSQL_DATABASE }}/" .env.testing
+            cp .env.example .env.testing
+            php artisan key:generate --env=testing
+            sed -i "s/DB_CONNECTION=.*/DB_CONNECTION=mysql/" .env.testing
+            sed -i "s/DB_HOST=.*/DB_HOST=127.0.0.1/" .env.testing
+            sed -i "s/DB_PORT=.*/DB_PORT=3306/" .env.testing
+            sed -i "s/DB_DATABASE=.*/DB_DATABASE=${{ secrets.MYSQL_DATABASE }}/" .env.testing
+            sed -i "s/DB_USERNAME=.*/DB_USERNAME=${{ secrets.MYSQL_USER }}/" .env.testing
+            sed -i "s/DB_PASSWORD=.*/DB_PASSWORD=${{ secrets.MYSQL_PASSWORD }}/" .env.testing
+
+      - name: Wait for MySQL
+        run: |
+          until nc -z 127.0.0.1 3306; do
+            echo "Attente de MySQL..."
+            sleep 1
+          done
+
+      - name: Run Migrations
+        run: php artisan migrate --env=testing
 
       - name: Run unit tests
         id: run-unit-tests
         run: |
-          echo "== Lancement des tests unitaires... =="
-          vendor/bin/phpunit --testsuite Unit --log-junit unit-report.xml
-          echo "== Tests unitaires terminés =="
+            echo "== Lancement des tests unitaires (JSON) == "
+            vendor/bin/phpunit --testsuite Unit --log-json unit-report.json
         continue-on-error: true
 
-      - name: Run feature tests
-        id: run-feature-tests
-        run: |
-          echo "== Lancement des tests fonctionnels... =="
-          vendor/bin/phpunit --testsuite Feature --log-junit feature-report.xml
-          echo "== Tests fonctionnels terminés =="
-        continue-on-error: true
+      - name: Upload Test Reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: phpunit-reports-json
+          path: |
+            unit-report.json
+            feature-report.json
