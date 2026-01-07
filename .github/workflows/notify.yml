@@ -3,10 +3,37 @@ name: Notify Slack and Email
 on:
   workflow_call:
     inputs:
-      job_status:
+      workflow_result:
         required: true
         type: string
-        description: "Status of the previous workflow jobs (success/failure)"
+      build_status:
+        required: false
+        type: string
+        default: 'skipped'
+      test_status:
+        required: false
+        type: string
+        default: 'skipped'
+      sast_status:
+        required: false
+        type: string
+        default: 'skipped'
+      image_status:
+        required: false
+        type: string
+        default: 'skipped'
+      dast_status:
+        required: false
+        type: string
+        default: 'skipped'
+      scan_status:
+        required: false
+        type: string
+        default: 'skipped'
+      push_status:
+        required: false
+        type: string
+        default: 'skipped'
     secrets:
       SLACK_WEBHOOK_URL:
         required: true
@@ -25,46 +52,68 @@ on:
 
 jobs:
   notify:
-    name: Send Notifications
+    name: Send Detailed Notifications
     runs-on: ubuntu-latest
     steps:
-      - name: Prepare Notification Data
-        id: data
+      - name: Prepare Status Icons
+        id: status
+        shell: bash
         run: |
-          # Définition des icônes et couleurs selon le statut reçu en input
-          if [ "${{ inputs.job_status }}" == "success" ]; then
-            echo "EMOJI=🎉" >> $GITHUB_OUTPUT
-            echo "COLOR=good" >> $GITHUB_OUTPUT # Vert pour Slack
-            echo "STATUS_MSG=Succès" >> $GITHUB_OUTPUT
+          get_icon() {
+            case "$1" in
+              success) echo "🎉";;
+              failure) echo "🚨";;
+              cancelled) echo "🚫";;
+              skipped) echo "⏭️";;
+              *) echo " ";;
+            esac
+          }
+
+          # On définit les icônes pour chaque étape
+          echo "ICON_BUILD=$(get_icon ${{ inputs.build_status }})" >> $GITHUB_OUTPUT
+          echo "ICON_TEST=$(get_icon ${{ inputs.test_status }})" >> $GITHUB_OUTPUT
+          echo "ICON_SAST=$(get_icon ${{ inputs.sast_status }})" >> $GITHUB_OUTPUT
+          echo "ICON_IMAGE=$(get_icon ${{ inputs.image_status }})" >> $GITHUB_OUTPUT
+          echo "ICON_DAST=$(get_icon ${{ inputs.dast_status }})" >> $GITHUB_OUTPUT
+          echo "ICON_SCAN=$(get_icon ${{ inputs.scan_status }})" >> $GITHUB_OUTPUT
+          echo "ICON_PUSH=$(get_icon ${{ inputs.push_status }})" >> $GITHUB_OUTPUT
+
+          # Gestion de la couleur et message global
+          if [ "${{ inputs.workflow_result }}" == "success" ]; then
+             echo "SLACK_COLOR=good" >> $GITHUB_OUTPUT
+             echo "GLOBAL_MSG=Succès du Pipeline" >> $GITHUB_OUTPUT
+             echo "GLOBAL_ICON=🎉" >> $GITHUB_OUTPUT
           else
-            echo "EMOJI=🚨" >> $GITHUB_OUTPUT
-            echo "COLOR=danger" >> $GITHUB_OUTPUT # Rouge pour Slack
-            echo "STATUS_MSG=Échec" >> $GITHUB_OUTPUT
+             echo "SLACK_COLOR=danger" >> $GITHUB_OUTPUT
+             echo "GLOBAL_MSG=Échec du Pipeline" >> $GITHUB_OUTPUT
+             echo "GLOBAL_ICON=🚨" >> $GITHUB_OUTPUT
           fi
 
-          # Nettoyage du message de commit pour éviter de casser le JSON (échappement des guillemets)
-          COMMIT_MSG=$(echo "${{ github.event.head_commit.message }}" | sed 's/"/\\"/g' | head -n 1)
-          echo "COMMIT_CLEAN=$COMMIT_MSG" >> $GITHUB_OUTPUT
+          CLEAN_MSG=$(echo "${{ github.event.head_commit.message }}" | sed 's/"/\\"/g' | head -n 1)
+          echo "COMMIT_MSG=$CLEAN_MSG" >> $GITHUB_OUTPUT
 
-      - name: Notify Slack (Rich Message)
+      - name: Notify Slack
         run: |
-          # Construction d'un message Slack riche avec "attachments"
           curl -X POST -H 'Content-type: application/json' \
             --data "{
               \"attachments\": [
                 {
-                  \"color\": \"${{ steps.data.outputs.COLOR }}\",
-                  \"pretext\": \"${{ steps.data.outputs.EMOJI }} Notification Pipeline: ${{ github.repository }}\",
+                  \"color\": \"${{ steps.status.outputs.SLACK_COLOR }}\",
+                  \"pretext\": \"${{ steps.status.outputs.GLOBAL_ICON }} Report: ${{ github.repository }}\",
                   \"fields\": [
-                    { \"title\": \"Status\", \"value\": \"${{ steps.data.outputs.STATUS_MSG }}\", \"short\": true },
-                    { \"title\": \"Branch\", \"value\": \"${{ github.ref_name }}\", \"short\": true },
-                    { \"title\": \"Triggered By\", \"value\": \"${{ github.actor }}\", \"short\": true },
-                    { \"title\": \"Commit\", \"value\": \"${{ steps.data.outputs.COMMIT_CLEAN }}\", \"short\": false }
+                    { \"title\": \"Build\", \"value\": \"${{ steps.status.outputs.ICON_BUILD }} ${{ inputs.build_status }}\", \"short\": true },
+                    { \"title\": \"Tests\", \"value\": \"${{ steps.status.outputs.ICON_TEST }} ${{ inputs.test_status }}\", \"short\": true },
+                    { \"title\": \"SAST Security\", \"value\": \"${{ steps.status.outputs.ICON_SAST }} ${{ inputs.sast_status }}\", \"short\": true },
+                    { \"title\": \"Docker Build\", \"value\": \"${{ steps.status.outputs.ICON_IMAGE }} ${{ inputs.image_status }}\", \"short\": true },
+                    { \"title\": \"DAST Security\", \"value\": \"${{ steps.status.outputs.ICON_DAST }} ${{ inputs.dast_status }}\", \"short\": true },
+                    { \"title\": \"Trivy Scan\", \"value\": \"${{ steps.status.outputs.ICON_SCAN }} ${{ inputs.scan_status }}\", \"short\": true },
+                    { \"title\": \"Push Registry\", \"value\": \"${{ steps.status.outputs.ICON_PUSH }} ${{ inputs.push_status }}\", \"short\": true }
                   ],
+                  \"footer\": \"Commit: ${{ steps.status.outputs.COMMIT_MSG }} | By: ${{ github.actor }}\",
                   \"actions\": [
                     {
                       \"type\": \"button\",
-                      \"text\": \"Voir les logs\",
+                      \"text\": \"🔍 Voir les Logs\",
                       \"url\": \"https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"
                     }
                   ]
@@ -73,7 +122,7 @@ jobs:
             }" \
             ${{ secrets.SLACK_WEBHOOK_URL }}
 
-      - name: Send Team Email (HTML)
+      - name: Send Email Report
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: ${{ secrets.SMTP_SERVER }}
@@ -81,24 +130,23 @@ jobs:
           username: ${{ secrets.SMTP_USERNAME }}
           password: ${{ secrets.SMTP_PASSWORD }}
           secure: true
-          subject: "[${{ steps.data.outputs.STATUS_MSG }}] CI/CD Report - ${{ github.repository }}"
+          subject: "${{ steps.status.outputs.GLOBAL_ICON }} DevSecOps Report - ${{ github.repository }}"
           html_body: |
-            <h3>${{ steps.data.outputs.EMOJI }} Pipeline ${{ steps.data.outputs.STATUS_MSG }}</h3>
-            <p>Le pipeline pour le dépôt <b>${{ github.repository }}</b> a terminé son exécution.</p>
+            <h2>${{ steps.status.outputs.GLOBAL_ICON }} Rapport d'exécution du Pipeline</h2>
+            <p>Branche: <b>${{ github.ref_name }}</b> | Commit: ${{ steps.status.outputs.COMMIT_MSG }}</p>
 
-            <table border="1" cellpadding="5" style="border-collapse: collapse;">
-              <tr><td><b>Branche</b></td><td>${{ github.ref_name }}</td></tr>
-              <tr><td><b>Auteur</b></td><td>${{ github.actor }}</td></tr>
-              <tr><td><b>Commit</b></td><td>${{ steps.data.outputs.COMMIT_CLEAN }}</td></tr>
-              <tr><td><b>SHA</b></td><td>${{ github.sha }}</td></tr>
+            <table border="1" cellpadding="8" style="border-collapse: collapse; width: 100%;">
+              <tr style="background-color: #f2f2f2;"><th>Étape</th><th>Statut</th><th>Détails</th></tr>
+              <tr><td>Build App</td><td>${{ steps.status.outputs.ICON_BUILD }}</td><td>${{ inputs.build_status }}</td></tr>
+              <tr><td>Tests Unitaires</td><td>${{ steps.status.outputs.ICON_TEST }}</td><td>${{ inputs.test_status }}</td></tr>
+              <tr><td>SAST (Code)</td><td>${{ steps.status.outputs.ICON_SAST }}</td><td>${{ inputs.sast_status }}</td></tr>
+              <tr><td>Build Image</td><td>${{ steps.status.outputs.ICON_IMAGE }}</td><td>${{ inputs.image_status }}</td></tr>
+              <tr><td>DAST (Web)</td><td>${{ steps.status.outputs.ICON_DAST }}</td><td>${{ inputs.dast_status }}</td></tr>
+              <tr><td>Trivy Scan</td><td>${{ steps.status.outputs.ICON_SCAN }}</td><td>${{ inputs.scan_status }}</td></tr>
+              <tr><td>Push Registry</td><td>${{ steps.status.outputs.ICON_PUSH }}</td><td>${{ inputs.push_status }}</td></tr>
             </table>
 
             <br/>
-            <a href="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" style="background-color: #2da44e; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
-              Voir les détails sur GitHub
-            </a>
-            <br/><br/>
-            <hr>
-            <small>Automated notification via GitHub Actions</small>
+            <a href="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}">Accéder au rapport complet sur GitHub</a>
           to: ${{ secrets.TEAM_EMAILS }}
           from: ${{ secrets.EMAIL_FROM }}
