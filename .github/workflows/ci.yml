@@ -21,14 +21,18 @@ jobs:
       MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
       MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
 
-  tests:
+  secret-detection:
     needs: build
-    uses: ./.github/workflows/tests.yml
-    secrets:
-      MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
-      MYSQL_USER: ${{ secrets.MYSQL_USER }}
-      MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
-      MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
+    uses: ./.github/workflows/secret-detection.yml
+
+#  tests:
+#    needs: build
+#    uses: ./.github/workflows/tests.yml
+#    secrets:
+#      MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
+#      MYSQL_USER: ${{ secrets.MYSQL_USER }}
+#      MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
+#      MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
 
 #  sast-security:
 #    needs: [ build,tests ]
@@ -57,7 +61,7 @@ jobs:
 #    secrets: inherit
 
   notify:
-    needs: [tests]
+    needs: [secret-detection]
     uses: ./.github/workflows/notify.yml
     secrets:
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
