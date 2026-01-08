@@ -60,19 +60,23 @@ jobs:
     uses: ./.github/workflows/build-image.yml
     secrets: inherit
 
-  dast-security:
-    needs: [build-image]
-    uses: ./.github/workflows/dast-security.yml
+  # dast-security:
+  #   needs: [build-image]
+  #   uses: ./.github/workflows/dast-security.yml
+  #   secrets:
+  #     DEFECTDOJO_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
+  #   with:
+  #     DEFECTDOJO_URL: ${{ vars.DEFECTDOJO_URL }}
+  #     DEFECTDOJO_ENGAGEMENT_ID: ${{ vars.DEFECTDOJO_ENGAGEMENT_ID }}
+
+  scan-trivy:
+    needs: [ build-image ]
+    uses: ./.github/workflows/scan-trivy.yml
     secrets:
       DEFECTDOJO_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
     with:
       DEFECTDOJO_URL: ${{ vars.DEFECTDOJO_URL }}
       DEFECTDOJO_ENGAGEMENT_ID: ${{ vars.DEFECTDOJO_ENGAGEMENT_ID }}
-
-#  scan-trivy:
-#    needs: [ build-image, sast-security, dast-security ]
-#    uses: ./.github/workflows/scan-trivy.yml
-#    secrets: inherit
 #
 #  push:
 #    needs: [ build-image,scan-trivy ]
@@ -80,7 +84,7 @@ jobs:
 #    secrets: inherit
 
   notify:
-   needs: [dast-security]
+   needs: [scan-trivy]
    uses: ./.github/workflows/notify.yml
    secrets:
     SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
