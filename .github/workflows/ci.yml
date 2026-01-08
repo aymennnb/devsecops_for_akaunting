@@ -62,7 +62,7 @@ jobs:
 #    secrets: inherit
 
   notify:
-#    needs: [push]
+   needs: [secret-detection]
     uses: ./.github/workflows/notify.yml
     secrets:
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
