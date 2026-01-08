@@ -133,10 +133,10 @@ jobs:
             -Dsonar.analysis.automaticAnalysis.disabled=true
             -Dsonar.qualitygate.wait=false
 
-  upload-sast-to-defectdojo:
-    name: Upload SAST reports to DefectDojo
+  upload-semgrep-to-defectdojo:
+    name: Upload Semgrep reports to DefectDojo
     runs-on: ubuntu-latest
-    needs: [semgrep-sast, snyk-sast]
+    needs: semgrep-sast
     if: always()
 
     steps:
@@ -145,12 +145,6 @@ jobs:
         with:
           name: semgrep-sast-reports
           path: semgrep-reports/
-
-      - name: Download Snyk report
-        uses: actions/download-artifact@v4
-        with:
-          name: snyk-sast-report
-          path: snyk-report/
 
       - name: Upload Semgrep General report to DefectDojo
         env:
@@ -193,6 +187,19 @@ jobs:
           else
             echo "Semgrep OWASP report not found"
           fi
+
+  upload-snyk-to-defectdojo:
+    name: Upload Snyk report to DefectDojo
+    runs-on: ubuntu-latest
+    needs: snyk-sast
+    if: always()
+
+    steps:
+      - name: Download Snyk report
+        uses: actions/download-artifact@v4
+        with:
+          name: snyk-sast-report
+          path: snyk-report/
 
       - name: Upload Snyk report to DefectDojo
         env:

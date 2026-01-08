@@ -74,14 +74,14 @@ jobs:
 #    uses: ./.github/workflows/push-to-registry.yml
 #    secrets: inherit
 
-  notify:
-   needs: [secret-detection]
-   uses: ./.github/workflows/notify.yml
-   secrets:
-    SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-    SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
-    SMTP_PORT: ${{ secrets.SMTP_PORT }}
-    SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
-    SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
-    TEAM_EMAILS: ${{ secrets.TEAM_EMAILS }}
-    EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+  # notify:
+  #  needs: [secret-detection]
+  #  uses: ./.github/workflows/notify.yml
+  #  secrets:
+  #   SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+  #   SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
+  #   SMTP_PORT: ${{ secrets.SMTP_PORT }}
+  #   SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+  #   SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+  #   TEAM_EMAILS: ${{ secrets.TEAM_EMAILS }}
+  #   EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
