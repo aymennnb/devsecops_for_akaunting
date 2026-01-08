@@ -1,5 +1,21 @@
-# main.tf - VERSION CORRIGÉE
+# main.tf - TOUTE LA CONFIGURATION EN UN SEUL FICHIER
 
+terraform {
+  required_version = ">= 1.0"
+
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+  }
+}
+
+provider "aws" {
+  region = "us-east-1"
+}
+
+# VPC
 resource "aws_vpc" "main" {
   cidr_block = "10.0.0.0/16"
 
@@ -8,10 +24,11 @@ resource "aws_vpc" "main" {
   }
 }
 
+# Subnet public
 resource "aws_subnet" "public" {
   vpc_id                  = aws_vpc.main.id
   cidr_block              = "10.0.1.0/24"
-  availability_zone       = "${var.aws_region}a"
+  availability_zone       = "us-east-1a"
   map_public_ip_on_launch = true
 
   tags = {
@@ -19,6 +36,7 @@ resource "aws_subnet" "public" {
   }
 }
 
+# Internet Gateway
 resource "aws_internet_gateway" "igw" {
   vpc_id = aws_vpc.main.id
 
@@ -27,6 +45,7 @@ resource "aws_internet_gateway" "igw" {
   }
 }
 
+# Route Table
 resource "aws_route_table" "public" {
   vpc_id = aws_vpc.main.id
 
@@ -40,15 +59,18 @@ resource "aws_route_table" "public" {
   }
 }
 
+# Route Table Association
 resource "aws_route_table_association" "public_assoc" {
   subnet_id      = aws_subnet.public.id
   route_table_id = aws_route_table.public.id
 }
 
+# ECS Cluster
 resource "aws_ecs_cluster" "akaunting_cluster" {
   name = "akaunting-cluster"
 }
 
+# Security Group
 resource "aws_security_group" "ecs_sg" {
   name        = "akaunting-ecs-sg"
   description = "Allow HTTP traffic"
@@ -62,14 +84,6 @@ resource "aws_security_group" "ecs_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  ingress {
-    description = "HTTPS"
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
   egress {
     from_port   = 0
     to_port     = 0
@@ -78,6 +92,7 @@ resource "aws_security_group" "ecs_sg" {
   }
 }
 
+# IAM Role pour ECS
 resource "aws_iam_role" "ecs_task_execution_role" {
   name = "akaunting-ecs-execution-role"
 
@@ -95,11 +110,13 @@ resource "aws_iam_role" "ecs_task_execution_role" {
   })
 }
 
+# IAM Policy Attachment
 resource "aws_iam_role_policy_attachment" "ecs_task_execution_policy" {
   role       = aws_iam_role.ecs_task_execution_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
+# ECS Task Definition
 resource "aws_ecs_task_definition" "akaunting" {
   family                   = "akaunting-task"
   network_mode             = "awsvpc"
@@ -112,7 +129,7 @@ resource "aws_ecs_task_definition" "akaunting" {
   container_definitions = jsonencode([
     {
       name      = "akaunting"
-      image     = var.docker_image
+      image     = "aymen138/akaunting_devops_project:latest"
       essential = true
       cpu       = 1024
       memory    = 2048
@@ -128,6 +145,7 @@ resource "aws_ecs_task_definition" "akaunting" {
   ])
 }
 
+# ECS Service
 resource "aws_ecs_service" "akaunting" {
   name            = "akaunting-service"
   cluster         = aws_ecs_cluster.akaunting_cluster.id
