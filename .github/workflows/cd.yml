@@ -15,190 +15,96 @@ on:
 
 env:
   AWS_REGION: us-east-1
-  TERRAFORM_VERSION: 1.5.0
   DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
   DOCKER_IMAGE_NAME: ${{ vars.DOCKER_IMAGE_NAME }}
 
 jobs:
-#  terraform-plan:
-#    name: Terraform Plan
-#    runs-on: ubuntu-latest
-#    if: github.event.workflow_run.conclusion == 'success'
-#    outputs:
-#      plan_exit_code: ${{ steps.tf_plan.outputs.exit_code }}
-#
-#    steps:
-#      - name: Checkout code
-#        uses: actions/checkout@v4
-#
-#      - name: Setup Terraform
-#        uses: hashicorp/setup-terraform@v2
-#        with:
-#          terraform_version: ${{ env.TERRAFORM_VERSION }}
-#
-#      - name: Configure AWS credentials
-#        uses: aws-actions/configure-aws-credentials@v4
-#        with:
-#          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-#          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-#          aws-region: ${{ env.AWS_REGION }}
-#
-#      - name: Terraform Init
-#        working-directory: ./terraform
-#        run: terraform init
-#
-#      - name: Terraform Validate
-#        working-directory: ./terraform
-#        run: terraform validate
-#
-#      - name: Terraform Format Check
-#        working-directory: ./terraform
-#        run: terraform fmt -check -recursive
-#
-#      - name: Terraform Plan
-#        working-directory: ./terraform
-#        id: tf_plan
-#        env:
-#          TF_VAR_docker_image: ${{ env.DOCKERHUB_USERNAME }}/${{ env.DOCKER_IMAGE_NAME }}:${{ github.event.inputs.image_tag || 'latest' }}
-#        run: |
-#          echo "== Running Terraform plan =="
-#          echo "Docker image: $TF_VAR_docker_image"
-#          terraform plan -lock=true -var="docker_image=$TF_VAR_docker_image"
-#          echo "exit_code=$?" >> $GITHUB_OUTPUT
-#
-#  terraform-apply:
-#    name: Terraform Apply
-#    runs-on: ubuntu-latest
-#    needs: terraform-plan
-#    if: github.event.workflow_run.conclusion == 'success'
-#    environment:
-#      name: production
-#
-#    steps:
-#      - name: Checkout code
-#        uses: actions/checkout@v4
-#
-#      - name: Setup Terraform
-#        uses: hashicorp/setup-terraform@v2
-#        with:
-#          terraform_version: ${{ env.TERRAFORM_VERSION }}
-#
-#      - name: Configure AWS credentials
-#        uses: aws-actions/configure-aws-credentials@v4
-#        with:
-#          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-#          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-#          aws-region: ${{ env.AWS_REGION }}
-#
-#      - name: Terraform Init
-#        working-directory: ./terraform
-#        run: terraform init
-#
-#      - name: Deploy to AWS
-#        working-directory: ./terraform
-#        env:
-#          TF_VAR_docker_image: ${{ env.DOCKERHUB_USERNAME }}/${{ env.DOCKER_IMAGE_NAME }}:${{ github.event.inputs.image_tag || 'latest' }}
-#        run: |
-#          echo "== Deploying to AWS ECS =="
-#          echo "Using image: $TF_VAR_docker_image"
-#          terraform apply -auto-approve -var="docker_image=$TF_VAR_docker_image"
-#
-#      - name: Verify deployment
-#        run: |
-#          echo "== Verifying deployment =="
-#          aws ecs describe-services \
-#            --cluster akaunting-cluster \
-#            --services akaunting-service \
-#            --region ${{ env.AWS_REGION }} \
-#            --query 'services[0].deployments[0].[status, rolloutState, updatedAt]' \
-#            --output table
-#
-#
-#  terraform-security-scan:
-#    name: Terraform Security Scan
-#    runs-on: ubuntu-latest
-#    if: github.event.workflow_run.conclusion == 'success'
-#
-#    steps:
-#      - name: Checkout code
-#        uses: actions/checkout@v4
-#
-#      - name: Run TFLint
-#        uses: terraform-linters/setup-tflint@v3
-#        with:
-#          tflint_version: latest
-#
-#      - name: Init TFLint
-#        working-directory: ./terraform
-#        run: tflint --init
-#
-#      - name: Run TFLint
-#        working-directory: ./terraform
-#        run: tflint -f compact
-#
-#      - name: Setup Checkov
-#        uses: bridgecrewio/checkov-action@master
-#        with:
-#          directory: terraform/
-#          framework: terraform
-#          quiet: false
-#          soft_fail: true
-#
-#      - name: Checkov report
-#        run: |
-#          echo "== Terraform security scan completed =="
-
-  check-ecs:
+  terraform-apply:
+    name: Deploy Infrastructure
     runs-on: ubuntu-latest
+    environment:
+      name: production
 
     steps:
-      - name: Configure AWS
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.5.0
+
+      - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
+          aws-region: ${{ env.AWS_REGION }}
 
-      - name: Check ECS Cluster
+      - name: Terraform Init
+        working-directory: ./terraform
+        run: terraform init
+
+      - name: Deploy with Terraform
+        working-directory: ./terraform
+        env:
+          TF_VAR_docker_image: ${{ env.DOCKERHUB_USERNAME }}/${{ env.DOCKER_IMAGE_NAME }}:${{ github.event.inputs.image_tag }}
         run: |
-          echo "== Checking ECS Cluster =="
+          echo "== Deploying complete infrastructure =="
+          echo "Docker image: $TF_VAR_docker_image"
 
-          # 1. Lister tous les clusters
-          echo "1. Listing all ECS clusters..."
-          aws ecs list-clusters --region us-east-1
+          # Apply en 2 étapes si nécessaire
+          terraform apply -auto-approve -var="docker_image=$TF_VAR_docker_image"
 
-          # 2. Décrire le cluster akaunting-cluster
-          echo "2. Describing 'akaunting-cluster'..."
+      - name: Get deployment outputs
+        working-directory: ./terraform
+        run: |
+          echo "== Deployment outputs =="
+          terraform output
+
+  verify-deployment:
+    name: Verify Deployment
+    runs-on: ubuntu-latest
+    needs: terraform-apply
+    environment:
+      name: production
+
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Check ECS deployment
+        run: |
+          echo "== Verifying ECS deployment =="
+
+          # Attendre un peu
+          sleep 30
+
+          # Vérifier le cluster
+          echo "Cluster status:"
           aws ecs describe-clusters \
             --clusters akaunting-cluster \
-            --region us-east-1 \
-            --query 'clusters[0]' || echo "Cluster not found"
+            --region ${{ env.AWS_REGION }} \
+            --query 'clusters[0].[clusterName, status, activeServicesCount]' \
+            --output table
 
-      - name: Check ECS Service
-        run: |
-          echo "== Checking ECS Service =="
-
-          # 1. Lister les services dans le cluster
-          echo "1. Listing services in cluster..."
-          aws ecs list-services \
-            --cluster akaunting-cluster \
-            --region us-east-1 \
-            --query 'serviceArns' || echo "Cannot list services"
-
-          # 2. Décrire le service
-          echo "2. Describing 'akaunting-service'..."
+          # Vérifier le service
+          echo "Service status:"
           aws ecs describe-services \
             --cluster akaunting-cluster \
             --services akaunting-service \
-            --region us-east-1 \
-            --query 'services[0]' || echo "Service not found"
+            --region ${{ env.AWS_REGION }} \
+            --query 'services[0].[serviceName, status, runningCount, desiredCount]' \
+            --output table
 
-      - name: Check Task Definitions
-        run: |
-          echo "== Checking Task Definitions =="
-
-          # Lister les task definitions
-          aws ecs list-task-definitions \
-            --region us-east-1 \
-            --query 'taskDefinitionArns' \
+          # Vérifier les tasks
+          echo "Running tasks:"
+          aws ecs list-tasks \
+            --cluster akaunting-cluster \
+            --region ${{ env.AWS_REGION }} \
+            --query 'taskArns' \
             --output table
