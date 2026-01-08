@@ -1,25 +1,25 @@
-#name: CD Akaunting Pipeline
-#
-#on:
-#  workflow_run:
-#    workflows: ["CI Akaunting pipeline"]
-#    types:
-#      - completed
-#  workflow_dispatch:
-#    inputs:
-#      image_tag:
-#        description: 'Docker image tag (default: latest)'
-#        required: false
-#        default: 'latest'
-#        type: string
-#
-#env:
-#  AWS_REGION: us-east-1
-#  TERRAFORM_VERSION: 1.5.0
-#  DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-#  DOCKER_IMAGE_NAME: ${{ vars.DOCKER_IMAGE_NAME }}
-#
-#jobs:
+name: CD Akaunting Pipeline
+
+on:
+  workflow_run:
+    workflows: ["CI Akaunting pipeline"]
+    types:
+      - completed
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'Docker image tag (default: latest)'
+        required: false
+        default: 'latest'
+        type: string
+
+env:
+  AWS_REGION: us-east-1
+  TERRAFORM_VERSION: 1.5.0
+  DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+  DOCKER_IMAGE_NAME: ${{ vars.DOCKER_IMAGE_NAME }}
+
+jobs:
 #  terraform-plan:
 #    name: Terraform Plan
 #    runs-on: ubuntu-latest
@@ -147,11 +147,7 @@
 #      - name: Checkov report
 #        run: |
 #          echo "== Terraform security scan completed =="
-name: Quick ECS Deploy
 
-on: workflow_dispatch
-
-jobs:
   quick-deploy:
     runs-on: ubuntu-latest
 
