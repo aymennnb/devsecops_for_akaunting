@@ -1,4 +1,4 @@
-name: Akaunting DevSecOps CI/CD
+name: CI Akaunting pipeline
 
 permissions:
   contents: read
