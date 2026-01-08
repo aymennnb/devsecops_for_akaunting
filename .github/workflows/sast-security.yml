@@ -2,10 +2,19 @@ name: SAST Security Workflow
 
 on:
   workflow_call:
+    inputs:
+      DEFECTDOJO_URL:
+        required: true
+        type: string
+      DEFECTDOJO_ENGAGEMENT_ID:
+        required: true
+        type: string
     secrets:
       SNYK_TOKEN:
         required: true
       SONAR_TOKEN:
+        required: true
+      DEFECTDOJO_API_KEY:
         required: true
 
 jobs:
@@ -16,7 +25,7 @@ jobs:
     continue-on-error: true
 
     outputs:
-      scan-completed: ${{ steps.upload-reports.outcome }}
+      reports-generated: ${{ steps.upload-reports.outcome == 'success' }}
 
     steps:
       - name: Checkout code
@@ -51,7 +60,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: semgrep-sast-reports-${{ github.sha }}
+          name: semgrep-sast-reports
           path: |
             GitHub Actions/SAST Security/Reports/
           retention-days: 7
@@ -59,9 +68,6 @@ jobs:
   snyk-sast:
     name: SAST Security with Snyk
     runs-on: ubuntu-latest
-
-    outputs:
-      sarif-file: ${{ steps.generate-sarif.outputs.sarif-path }}
 
     steps:
       - name: Checkout code
@@ -82,13 +88,13 @@ jobs:
           args: --severity-threshold=medium --sarif-file-output=snyk.sarif
           command: test
 
-      - name: Run Snyk MONITOR to Dashboard
-        uses: snyk/actions/php@master
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      - name: Upload Snyk report
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
-          args: --severity-threshold=high
-          command: monitor
+          name: snyk-sast-report
+          path: snyk.sarif
+          retention-days: 7
 
   sonarcloud-sast:
     name: SAST Security with SonarQubeCloud
@@ -126,3 +132,85 @@ jobs:
             -Dsonar.sourceEncoding=UTF-8
             -Dsonar.analysis.automaticAnalysis.disabled=true
             -Dsonar.qualitygate.wait=false
+
+  upload-sast-to-defectdojo:
+    name: Upload SAST reports to DefectDojo
+    runs-on: ubuntu-latest
+    needs: [semgrep-sast, snyk-sast]
+    if: always()
+
+    steps:
+      - name: Download Semgrep reports
+        uses: actions/download-artifact@v4
+        with:
+          name: semgrep-sast-reports
+          path: semgrep-reports/
+
+      - name: Download Snyk report
+        uses: actions/download-artifact@v4
+        with:
+          name: snyk-sast-report
+          path: snyk-report/
+
+      - name: Upload Semgrep General report to DefectDojo
+        env:
+          DD_URL: ${{ inputs.DEFECTDOJO_URL }}
+          DD_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
+          DD_ENGAGEMENT_ID: ${{ inputs.DEFECTDOJO_ENGAGEMENT_ID }}
+        run: |
+          if [ -f "semgrep-reports/GitHub Actions/SAST Security/Reports/semgrep-general.json" ]; then
+            echo "Uploading Semgrep General report to DefectDojo..."
+            curl -X POST "$DD_URL/api/v2/import-scan/" \
+              -H "Authorization: Token $DD_API_KEY" \
+              -F "engagement=$DD_ENGAGEMENT_ID" \
+              -F "scan_type=Semgrep JSON Report" \
+              -F "file=@semgrep-reports/GitHub Actions/SAST Security/Reports/semgrep-general.json" \
+              -F "verified=true" \
+              -F "active=true" \
+              -F "close_old_findings=true" \
+              -F "skip_duplicates=true"
+          else
+            echo "Semgrep General report not found"
+          fi
+
+      - name: Upload Semgrep OWASP report to DefectDojo
+        env:
+          DD_URL: ${{ inputs.DEFECTDOJO_URL }}
+          DD_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
+          DD_ENGAGEMENT_ID: ${{ inputs.DEFECTDOJO_ENGAGEMENT_ID }}
+        run: |
+          if [ -f "semgrep-reports/GitHub Actions/SAST Security/Reports/semgrep-owasp.json" ]; then
+            echo "Uploading Semgrep OWASP report to DefectDojo..."
+            curl -X POST "$DD_URL/api/v2/import-scan/" \
+              -H "Authorization: Token $DD_API_KEY" \
+              -F "engagement=$DD_ENGAGEMENT_ID" \
+              -F "scan_type=Semgrep JSON Report" \
+              -F "file=@semgrep-reports/GitHub Actions/SAST Security/Reports/semgrep-owasp.json" \
+              -F "verified=true" \
+              -F "active=true" \
+              -F "close_old_findings=true" \
+              -F "skip_duplicates=true"
+          else
+            echo "Semgrep OWASP report not found"
+          fi
+
+      - name: Upload Snyk report to DefectDojo
+        env:
+          DD_URL: ${{ inputs.DEFECTDOJO_URL }}
+          DD_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
+          DD_ENGAGEMENT_ID: ${{ inputs.DEFECTDOJO_ENGAGEMENT_ID }}
+        run: |
+          if [ -f "snyk-report/snyk.sarif" ]; then
+            echo "Uploading Snyk SARIF report to DefectDojo..."
+            curl -X POST "$DD_URL/api/v2/import-scan/" \
+              -H "Authorization: Token $DD_API_KEY" \
+              -F "engagement=$DD_ENGAGEMENT_ID" \
+              -F "scan_type=Snyk Scan" \
+              -F "file=@snyk-report/snyk.sarif" \
+              -F "verified=true" \
+              -F "active=true" \
+              -F "close_old_findings=true" \
+              -F "skip_duplicates=true"
+          else
+            echo "Snyk report not found"
+          fi

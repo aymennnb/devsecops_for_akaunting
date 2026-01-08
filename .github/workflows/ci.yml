@@ -44,12 +44,16 @@ jobs:
 #      MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
 #      MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
 #
-#  sast-security:
-#    needs: [ tests ]
-#    uses: ./.github/workflows/sast-security.yml
-#    secrets:
-#      SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-#      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+ sast-security:
+   needs: [ secret-detection ]
+   uses: ./.github/workflows/sast-security.yml
+   secrets:
+    SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+    SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+    DEFECTDOJO_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
+  with:
+    DEFECTDOJO_URL: ${{ vars.DEFECTDOJO_URL }}
+    DEFECTDOJO_ENGAGEMENT_ID: ${{ vars.DEFECTDOJO_ENGAGEMENT_ID }}
 #
 #  build-image:
 #    needs: [ sast-security ]
