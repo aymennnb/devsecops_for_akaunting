@@ -55,10 +55,10 @@ jobs:
   #     DEFECTDOJO_URL: ${{ vars.DEFECTDOJO_URL }}
   #     DEFECTDOJO_ENGAGEMENT_ID: ${{ vars.DEFECTDOJO_ENGAGEMENT_ID }}
 
- build-image:
-   needs: [ build ]
-   uses: ./.github/workflows/build-image.yml
-   secrets: inherit
+  build-image:
+    needs: [ build ]
+    uses: ./.github/workflows/build-image.yml
+    secrets: inherit
 
   dast-security:
     needs: [build-image]
