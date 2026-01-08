@@ -1,21 +1,6 @@
-name: CD Akaunting pipeline
-
-
-permissions:
-  contents: read
-  actions: read
-  checks: write
-  security-events: write
-  issues: write
-  pull-requests: write
-
+name: CD Pipeline - Deploy to AWS
 
 on:
-  # push:
-  #   branches: [main]
-  #   paths:
-  #     - "terraform/**"
-  #     - ".github/workflows/deploy.yml"
   workflow_run:
     workflows: ["CI Akaunting pipeline"]
     types:
@@ -23,88 +8,17 @@ on:
 
 env:
   AWS_REGION: us-east-1
-  TERRAFORM_VERSION: 1.5.0
+  DOCKER_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/${{ vars.DOCKER_IMAGE_NAME }}:latest
 
 jobs:
-  terraform-plan:
-    name: Terraform Plan
+  deploy:
+    name: Deploy to AWS ECS
     runs-on: ubuntu-latest
-    if: github.event_name == 'push'
-    outputs:
-      plan_exit_code: ${{ steps.tf_plan.outputs.exit_code }}
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: ${{ env.TERRAFORM_VERSION }}
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Terraform Init
-        working-directory: ./terraform
-        run: terraform init
-
-      - name: Terraform Refresh
-        working-directory: ./terraform
-        run: terraform refresh
-        continue-on-error: true
-
-      - name: Terraform Validate
-        working-directory: ./terraform
-        run: terraform validate
-
-      - name: Terraform Format Check
-        working-directory: ./terraform
-        run: terraform fmt -check -recursive
-
-      - name: Terraform Plan
-        working-directory: ./terraform
-        id: tf_plan
-        run: |
-          terraform plan -lock=true
-          echo "exit_code=$?" >> $GITHUB_OUTPUT
-        continue-on-error: true
-
-      - name: Post Plan Results
-        uses: actions/github-script@v7
-        if: github.event_name == 'pull_request'
-        with:
-          script: |
-            const fs = require('fs');
-            const plan = fs.readFileSync('terraform/tfplan', 'utf8');
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: `## Terraform Plan\n\n\`\`\`\n${plan}\n\`\`\``
-            });
-
-  terraform-apply:
-    name: Terraform Apply
-    runs-on: ubuntu-latest
-    needs: terraform-plan
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.event.workflow_run.conclusion == 'success'
     environment:
       name: production
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: ${{ env.TERRAFORM_VERSION }}
-
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -112,81 +26,42 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Terraform Init
-        working-directory: ./terraform
-        run: terraform init
+      - name: Update ECS service with latest image
+        run: |
+          echo "== Updating ECS service with latest image =="
 
-      - name: Terraform Refresh
-        working-directory: ./terraform
-        run: terraform refresh
-        continue-on-error: true
+          # Mettre à jour la task definition avec la nouvelle image
+          TASK_DEF=$(aws ecs describe-task-definition --task-definition akaunting-task --query 'taskDefinition')
 
-      - name: Import Existing ECS Service
-        working-directory: ./terraform
-        run: terraform import aws_ecs_service.akaunting akaunting-cluster/akaunting-service
-        continue-on-error: true
-      - name: Import Existing ECS Task Definition
-        working-directory: ./terraform
-        run: terraform import aws_ecs_task_definition.akaunting akaunting-task
-        continue-on-error: true
-      - name: Terraform Apply
-        working-directory: ./terraform
-        run: terraform apply -auto-approve
+          # Remplacer l'image dans la task definition
+          NEW_TASK_DEF=$(echo $TASK_DEF | jq --arg IMAGE "${{ env.DOCKER_IMAGE }}" '.containerDefinitions[0].image = $IMAGE')
 
-      - name: Upload State File
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: terraform-state
-          path: terraform/terraform.tfstate*
-          retention-days: 30
+          # Enregistrer la nouvelle version
+          echo $NEW_TASK_DEF > new-task-def.json
+          aws ecs register-task-definition --cli-input-json file://new-task-def.json
 
-      - name: Post Apply Results
-        uses: actions/github-script@v7
-        if: github.event_name == 'pull_request'
-        with:
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: `## Terraform Apply\n\nDeployment completed. Check the logs for details.`
-            });
+          # Mettre à jour le service
+          aws ecs update-service \
+            --cluster akaunting-cluster \
+            --service akaunting-service \
+            --task-definition akaunting-task \
+            --force-new-deployment
 
-  security-scan:
-    name: Terraform Security Scan
-    runs-on: ubuntu-latest
+      - name: Wait for deployment
+        run: |
+          echo "== Waiting for deployment to complete =="
+          aws ecs wait services-stable \
+            --cluster akaunting-cluster \
+            --services akaunting-service \
+            --region ${{ env.AWS_REGION }}
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+          echo "== Deployment successful =="
 
-      - name: Run TFLint
-        uses: terraform-linters/setup-tflint@v3
-        with:
-          tflint_version: latest
-
-      - name: Init TFLint
-        working-directory: ./terraform
-        run: tflint --init
-
-      - name: Run TFLint
-        working-directory: ./terraform
-        run: tflint -f compact
-
-      - name: Setup Checkov
-        uses: bridgecrewio/checkov-action@master
-        with:
-          directory: terraform/
-          framework: terraform
-          quiet: false
-          soft_fail: true
-          output_format: sarif
-          output_file_path: reports
-
-      - name: Upload SARIF Report
-        uses: github/codeql-action/upload-sarif@v4
-        if: hashFiles('reports/results.sarif') != ''
-        with:
-          sarif_file: reports/results.sarif
-          category: Checkov
+      - name: Get service status
+        run: |
+          echo "== Service status =="
+          aws ecs describe-services \
+            --cluster akaunting-cluster \
+            --services akaunting-service \
+            --query 'services[0].[taskDefinition, deployments[0].status, deployments[0].updatedAt]' \
+            --output table
