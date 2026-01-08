@@ -11,16 +11,6 @@ on:
         required: true
       MYSQL_ROOT_PASSWORD:
         required: true
-    outputs:
-      tests-passed:
-        description: "Indique si les tests ont réussi"
-        value: ${{ jobs.execute-tests.outputs.tests-passed }}
-      unit-report:
-        description: "Chemin du rapport unitaire"
-        value: ${{ jobs.execute-tests.outputs.unit-report }}
-      feature-report:
-        description: "Chemin du rapport fonctionnel"
-        value: ${{ jobs.execute-tests.outputs.feature-report }}
 
 jobs:
   execute-tests:
@@ -110,7 +100,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: phpunit-reports
+          name: phpunit-reports-${{ github.sha }}
           path: |
             unit-report.xml
             feature-report.xml

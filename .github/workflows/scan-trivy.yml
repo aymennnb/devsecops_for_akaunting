@@ -47,13 +47,13 @@ jobs:
 
       - name: Run Trivy vulnerability scanner
         run: |
-          trivy image --format json --ignore-unfixed --vuln-type os,library --severity CRITICAL,HIGH,MEDIUM,LOW -o trivy-scan-report.json ${{ env.DOCKER_IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+          trivy image --format json --ignore-unfixed --vuln-type os,library --severity CRITICAL,HIGH,MEDIUM,LOW -o trivy-scan-report-${{ github.sha }}.json ${{ env.DOCKER_IMAGE_NAME }}:${{ env.IMAGE_TAG }}
 
       - name: Upload scan results as artifact
         uses: actions/upload-artifact@v4
         with:
-          name: trivy-scan-report
-          path: trivy-scan-report.json
+          name: trivy-scan-report-${{ github.sha }}
+          path: trivy-scan-report-${{ github.sha }}.json
           retention-days: 7
 
   upload-trivy-to-defectdojo:
@@ -66,7 +66,7 @@ jobs:
       - name: Download Trivy report
         uses: actions/download-artifact@v4
         with:
-          name: trivy-scan-report
+          name: trivy-scan-report-${{ github.sha }}
           path: ./
 
       - name: Upload Trivy report to DefectDojo
@@ -75,12 +75,12 @@ jobs:
           DD_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
           DD_ENGAGEMENT_ID: ${{ inputs.DEFECTDOJO_ENGAGEMENT_ID }}
         run: |
-          if [ -f "trivy-scan-report.json" ]; then
+          if [ -f "trivy-scan-report-${{ github.sha }}.json" ]; then
             curl -X POST "$DD_URL/api/v2/import-scan/" \
               -H "Authorization: Token $DD_API_KEY" \
               -F "engagement=$DD_ENGAGEMENT_ID" \
               -F "scan_type=Trivy Scan" \
-              -F "file=@trivy-scan-report.json" \
+              -F "file=@trivy-scan-report-${{ github.sha }}.json" \
               -F "verified=true" \
               -F "active=true" \
               -F "close_old_findings=true" \

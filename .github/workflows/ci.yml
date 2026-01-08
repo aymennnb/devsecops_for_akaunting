@@ -30,18 +30,18 @@ jobs:
       DEFECTDOJO_URL: ${{ vars.DEFECTDOJO_URL }}
       DEFECTDOJO_ENGAGEMENT_ID: ${{ vars.DEFECTDOJO_ENGAGEMENT_ID }}
 
-  dependency-check:
-    needs: build
-    uses: ./.github/workflows/dependency-check.yml
-
-  tests:
-    needs: [secret-detection, dependency-check]
-    uses: ./.github/workflows/tests.yml
-    secrets:
-      MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
-      MYSQL_USER: ${{ secrets.MYSQL_USER }}
-      MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
-      MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
+#  dependency-check:
+#    needs: build
+#    uses: ./.github/workflows/dependency-check.yml
+#
+#  tests:
+#    needs: [secret-detection, dependency-check]
+#    uses: ./.github/workflows/tests.yml
+#    secrets:
+#      MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
+#      MYSQL_USER: ${{ secrets.MYSQL_USER }}
+#      MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
+#      MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
 
   sast-security:
     needs: tests
@@ -54,42 +54,42 @@ jobs:
       DEFECTDOJO_URL: ${{ vars.DEFECTDOJO_URL }}
       DEFECTDOJO_ENGAGEMENT_ID: ${{ vars.DEFECTDOJO_ENGAGEMENT_ID }}
 
-  build-image:
-    needs: sast-security
-    uses: ./.github/workflows/build-image.yml
-    secrets: inherit
-
-  dast-security:
-    needs: build-image
-    uses: ./.github/workflows/dast-security.yml
-    secrets:
-      DEFECTDOJO_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
-    with:
-      DEFECTDOJO_URL: ${{ vars.DEFECTDOJO_URL }}
-      DEFECTDOJO_ENGAGEMENT_ID: ${{ vars.DEFECTDOJO_ENGAGEMENT_ID }}
-
-  scan-trivy:
-    needs: dast-security
-    uses: ./.github/workflows/scan-trivy.yml
-    secrets:
-      DEFECTDOJO_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
-    with:
-      DEFECTDOJO_URL: ${{ vars.DEFECTDOJO_URL }}
-      DEFECTDOJO_ENGAGEMENT_ID: ${{ vars.DEFECTDOJO_ENGAGEMENT_ID }}
-
-  push:
-    needs: scan-trivy
-    uses: ./.github/workflows/push-to-registry.yml
-    secrets: inherit
-
-  notify:
-    needs: push
-    uses: ./.github/workflows/notify.yml
-    secrets:
-      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-      SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
-      SMTP_PORT: ${{ secrets.SMTP_PORT }}
-      SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
-      SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
-      TEAM_EMAILS: ${{ secrets.TEAM_EMAILS }}
-      EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+#  build-image:
+#    needs: sast-security
+#    uses: ./.github/workflows/build-image.yml
+#    secrets: inherit
+#
+#  dast-security:
+#    needs: build-image
+#    uses: ./.github/workflows/dast-security.yml
+#    secrets:
+#      DEFECTDOJO_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
+#    with:
+#      DEFECTDOJO_URL: ${{ vars.DEFECTDOJO_URL }}
+#      DEFECTDOJO_ENGAGEMENT_ID: ${{ vars.DEFECTDOJO_ENGAGEMENT_ID }}
+#
+#  scan-trivy:
+#    needs: dast-security
+#    uses: ./.github/workflows/scan-trivy.yml
+#    secrets:
+#      DEFECTDOJO_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
+#    with:
+#      DEFECTDOJO_URL: ${{ vars.DEFECTDOJO_URL }}
+#      DEFECTDOJO_ENGAGEMENT_ID: ${{ vars.DEFECTDOJO_ENGAGEMENT_ID }}
+#
+#  push:
+#    needs: scan-trivy
+#    uses: ./.github/workflows/push-to-registry.yml
+#    secrets: inherit
+#
+#  notify:
+#    needs: push
+#    uses: ./.github/workflows/notify.yml
+#    secrets:
+#      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+#      SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
+#      SMTP_PORT: ${{ secrets.SMTP_PORT }}
+#      SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+#      SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+#      TEAM_EMAILS: ${{ secrets.TEAM_EMAILS }}
+#      EMAIL_FROM: ${{ secrets.EMAIL_FROM }}

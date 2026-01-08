@@ -21,7 +21,7 @@ jobs:
 
     env:
       DOCKER_IMAGE_NAME: ${{ vars.DOCKER_IMAGE_NAME }}
-      IMAGE_TAG_COMMIT: ${{ vars.DOCKER_IMAGE_NAME}}:${{ github.sha }}
+      IMAGE_TAG_COMMIT: ${{ vars.DOCKER_IMAGE_NAME }}:${{ github.sha }}
 
     steps:
       - name: Checkout code
@@ -76,8 +76,8 @@ jobs:
         if: always()
         run: |
           if [ -f "report_json.json" ]; then
-            mv report_json.json zap-scan-report.json
-            echo "ZAP report renamed to zap-scan-report.json"
+            mv report_json.json zap-scan-report-${{ github.sha }}.json
+            echo "ZAP report renamed to zap-scan-report-${{ github.sha }}.json"
           else
             echo "ZAP report not found"
           fi
@@ -86,8 +86,8 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: zap-scan-report
-          path: zap-scan-report.json
+          name: zap-scan-report-${{ github.sha }}
+          path: zap-scan-report-${{ github.sha }}.json
           retention-days: 7
 
       - name: Stop Docker container
@@ -104,7 +104,7 @@ jobs:
 
     env:
       DOCKER_IMAGE_NAME: ${{ vars.DOCKER_IMAGE_NAME }}
-      IMAGE_TAG_COMMIT: ${{ vars.DOCKER_IMAGE_NAME}}:${{ github.sha }}
+      IMAGE_TAG_COMMIT: ${{ vars.DOCKER_IMAGE_NAME }}:${{ github.sha }}
 
     steps:
       - name: Checkout code
@@ -158,24 +158,24 @@ jobs:
             -severity medium,high,critical \
             -rate-limit 150 \
             -timeout 30 \
-            -json-export nuclei-results.json || true
+            -json-export nuclei-results-${{ github.sha }}.json || true
 
       - name: Format JSON report
         run: |
           echo "=== Formatting JSON report ==="
-          if [ -s "nuclei-results.json" ]; then
-            jq '.' "nuclei-results.json" > nuclei-dast-report.json
+          if [ -s "nuclei-results-${{ github.sha }}.json" ]; then
+            jq '.' "nuclei-results-${{ github.sha }}.json" > nuclei-dast-report-${{ github.sha }}.json
             echo "JSON report formatted"
           else
-            echo '{"info": "No results found"}' > nuclei-dast-report.json
+            echo '{"info": "No results found"}' > nuclei-dast-report-${{ github.sha }}.json
           fi
 
       - name: Upload Nuclei results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: nuclei-dast-report
-          path: nuclei-dast-report.json
+          name: nuclei-dast-report-${{ github.sha }}
+          path: nuclei-dast-report-${{ github.sha }}.json
           retention-days: 7
 
       - name: Stop container
@@ -194,7 +194,7 @@ jobs:
       - name: Download ZAP report
         uses: actions/download-artifact@v4
         with:
-          name: zap-scan-report
+          name: zap-scan-report-${{ github.sha }}
           path: ./
 
       - name: Upload ZAP report to DefectDojo
@@ -203,13 +203,13 @@ jobs:
           DD_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
           DD_ENGAGEMENT_ID: ${{ inputs.DEFECTDOJO_ENGAGEMENT_ID }}
         run: |
-          if [ -f "zap-scan-report.json" ]; then
+          if [ -f "zap-scan-report-${{ github.sha }}.json" ]; then
             echo "Uploading ZAP report to DefectDojo..."
             curl -X POST "$DD_URL/api/v2/import-scan/" \
               -H "Authorization: Token $DD_API_KEY" \
               -F "engagement=$DD_ENGAGEMENT_ID" \
               -F "scan_type=ZAP Scan" \
-              -F "file=@zap-scan-report.json" \
+              -F "file=@zap-scan-report-${{ github.sha }}.json" \
               -F "verified=true" \
               -F "active=true" \
               -F "close_old_findings=true" \
@@ -228,7 +228,7 @@ jobs:
       - name: Download Nuclei report
         uses: actions/download-artifact@v4
         with:
-          name: nuclei-dast-report
+          name: nuclei-dast-report-${{ github.sha }}
           path: ./
 
       - name: Upload Nuclei report to DefectDojo
@@ -237,13 +237,13 @@ jobs:
           DD_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
           DD_ENGAGEMENT_ID: ${{ inputs.DEFECTDOJO_ENGAGEMENT_ID }}
         run: |
-          if [ -f "nuclei-dast-report.json" ]; then
+          if [ -f "nuclei-dast-report-${{ github.sha }}.json" ]; then
             echo "Uploading Nuclei report to DefectDojo..."
             curl -X POST "$DD_URL/api/v2/import-scan/" \
               -H "Authorization: Token $DD_API_KEY" \
               -F "engagement=$DD_ENGAGEMENT_ID" \
               -F "scan_type=Nuclei Scan" \
-              -F "file=@nuclei-dast-report.json" \
+              -F "file=@nuclei-dast-report-${{ github.sha }}.json" \
               -F "verified=true" \
               -F "active=true" \
               -F "close_old_findings=true" \

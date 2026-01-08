@@ -36,7 +36,7 @@ jobs:
         id: semgrep-general
         run: |
           echo "== Scan général Semgrep... =="
-          semgrep ci --config=auto --json > semgrep-general.json || true
+          semgrep ci --config=auto --json > semgrep-general-${{ github.sha }}.json || true
           echo "== Scan général terminé =="
         continue-on-error: true
 
@@ -44,7 +44,7 @@ jobs:
         id: semgrep-owasp
         run: |
           echo "== Scan OWASP Semgrep... =="
-          semgrep ci --config=p/owasp-top-ten --json > semgrep-owasp.json || true
+          semgrep ci --config=p/owasp-top-ten --json > semgrep-owasp-${{ github.sha }}.json || true
           echo "== Scan OWASP terminé =="
         continue-on-error: true
 
@@ -52,16 +52,16 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: semgrep-general-report
-          path: semgrep-general.json
+          name: semgrep-general-report-${{ github.sha }}
+          path: semgrep-general-${{ github.sha }}.json
           retention-days: 7
 
       - name: Upload Semgrep OWASP report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: semgrep-owasp-report
-          path: semgrep-owasp.json
+          name: semgrep-owasp-report-${{ github.sha }}
+          path: semgrep-owasp-${{ github.sha }}.json
           retention-days: 7
 
   snyk-sast:
@@ -84,15 +84,15 @@ jobs:
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
-          args: --severity-threshold=medium --sarif-file-output=snyk.sarif
+          args: --severity-threshold=medium --sarif-file-output=snyk-sast-report-${{ github.sha }}.sarif
           command: test
 
       - name: Upload Snyk report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: snyk-sast-report
-          path: snyk.sarif
+          name: snyk-sast-report-${{ github.sha }}
+          path: snyk-sast-report-${{ github.sha }}.sarif
           retention-days: 7
 
   sonarcloud-sast:
@@ -142,13 +142,13 @@ jobs:
       - name: Download Semgrep General report
         uses: actions/download-artifact@v4
         with:
-          name: semgrep-general-report
+          name: semgrep-general-report-${{ github.sha }}
           path: ./
 
       - name: Download Semgrep OWASP report
         uses: actions/download-artifact@v4
         with:
-          name: semgrep-owasp-report
+          name: semgrep-owasp-report-${{ github.sha }}
           path: ./
 
       - name: Upload Semgrep General report to DefectDojo
@@ -157,13 +157,13 @@ jobs:
           DD_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
           DD_ENGAGEMENT_ID: ${{ inputs.DEFECTDOJO_ENGAGEMENT_ID }}
         run: |
-          if [ -f "semgrep-general.json" ]; then
+          if [ -f "semgrep-general-${{ github.sha }}.json" ]; then
             echo "Uploading Semgrep General report to DefectDojo..."
             curl -X POST "$DD_URL/api/v2/import-scan/" \
               -H "Authorization: Token $DD_API_KEY" \
               -F "engagement=$DD_ENGAGEMENT_ID" \
               -F "scan_type=Semgrep JSON Report" \
-              -F "file=@semgrep-general.json" \
+              -F "file=@semgrep-general-${{ github.sha }}.json" \
               -F "verified=true" \
               -F "active=true" \
               -F "close_old_findings=true" \
@@ -178,13 +178,13 @@ jobs:
           DD_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
           DD_ENGAGEMENT_ID: ${{ inputs.DEFECTDOJO_ENGAGEMENT_ID }}
         run: |
-          if [ -f "semgrep-owasp.json" ]; then
+          if [ -f "semgrep-owasp-${{ github.sha }}.json" ]; then
             echo "Uploading Semgrep OWASP report to DefectDojo..."
             curl -X POST "$DD_URL/api/v2/import-scan/" \
               -H "Authorization: Token $DD_API_KEY" \
               -F "engagement=$DD_ENGAGEMENT_ID" \
               -F "scan_type=Semgrep JSON Report" \
-              -F "file=@semgrep-owasp.json" \
+              -F "file=@semgrep-owasp-${{ github.sha }}.json" \
               -F "verified=true" \
               -F "active=true" \
               -F "close_old_findings=true" \
@@ -203,7 +203,7 @@ jobs:
       - name: Download Snyk report
         uses: actions/download-artifact@v4
         with:
-          name: snyk-sast-report
+          name: snyk-sast-report-${{ github.sha }}
           path: ./
 
       - name: Upload Snyk report to DefectDojo
@@ -212,13 +212,13 @@ jobs:
           DD_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
           DD_ENGAGEMENT_ID: ${{ inputs.DEFECTDOJO_ENGAGEMENT_ID }}
         run: |
-          if [ -f "snyk.sarif" ]; then
+          if [ -f "snyk-sast-report-${{ github.sha }}.sarif" ]; then
             echo "Uploading Snyk SARIF report to DefectDojo..."
             curl -X POST "$DD_URL/api/v2/import-scan/" \
               -H "Authorization: Token $DD_API_KEY" \
               -F "engagement=$DD_ENGAGEMENT_ID" \
               -F "scan_type=Snyk Scan" \
-              -F "file=@snyk.sarif" \
+              -F "file=@snyk-sast-report-${{ github.sha }}.sarif" \
               -F "verified=true" \
               -F "active=true" \
               -F "close_old_findings=true" \
