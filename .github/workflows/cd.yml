@@ -113,6 +113,7 @@ jobs:
             --query 'services[0].deployments[0].[status, rolloutState, updatedAt]' \
             --output table
 
+
   terraform-security-scan:
     name: Terraform Security Scan
     runs-on: ubuntu-latest
