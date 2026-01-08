@@ -10,7 +10,8 @@ jobs:
     env:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKER_IMAGE_NAME: ${{ vars.DOCKER_IMAGE_NAME }}
-      DOCKERHUB_TAG: ${{ secrets.DOCKERHUB_USERNAME }}/${{ vars.DOCKER_IMAGE_NAME }}:${{ github.sha }}
+      DOCKERHUB_TAG_SHA: ${{ secrets.DOCKERHUB_USERNAME }}/${{ vars.DOCKER_IMAGE_NAME }}:${{ github.sha }}
+      DOCKERHUB_TAG_LATEST: ${{ secrets.DOCKERHUB_USERNAME }}/${{ vars.DOCKER_IMAGE_NAME }}:latest
 
     steps:
       - name: Download Docker image artifact
@@ -23,22 +24,30 @@ jobs:
         run: |
           echo "=== Chargement de l'image Docker depuis le fichier tar ==="
           docker load -i docker-image.tar
-          echo "== Images chargée =="
+          echo "== Images chargées =="
           docker images
+
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ env.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
-      - name: Tag image for Docker Hub
+      - name: Tag images for Docker Hub
         run: |
           echo "=== Tag de l'image pour Docker Hub ==="
-          docker tag ${{ env.DOCKER_IMAGE_NAME }}:${{ github.sha }} ${{ env.DOCKERHUB_TAG }}
+          # Tag avec le SHA du commit
+          docker tag ${{ env.DOCKER_IMAGE_NAME }}:${{ github.sha }} ${{ env.DOCKERHUB_TAG_SHA }}
+          # Tag avec 'latest'
+          docker tag ${{ env.DOCKER_IMAGE_NAME }}:${{ github.sha }} ${{ env.DOCKERHUB_TAG_LATEST }}
           echo "== Images taggées =="
           docker images | grep ${{ env.DOCKERHUB_USERNAME }}
+
       - name: Push to Docker Hub
         run: |
           echo "=== Push vers Docker Hub ==="
-          docker push ${{ env.DOCKERHUB_TAG }}
+          # Push du tag SHA
+          docker push ${{ env.DOCKERHUB_TAG_SHA }}
+          # Push du tag latest
+          docker push ${{ env.DOCKERHUB_TAG_LATEST }}
           echo "== Images poussées avec succès =="
