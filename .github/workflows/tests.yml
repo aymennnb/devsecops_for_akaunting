@@ -80,7 +80,6 @@ jobs:
           sed -i "s/DB_DATABASE=.*/DB_DATABASE=${{ secrets.MYSQL_DATABASE }}/" .env.testing
           sed -i "s/DB_USERNAME=.*/DB_USERNAME=${{ secrets.MYSQL_USER }}/" .env.testing
           sed -i "s/DB_PASSWORD=.*/DB_PASSWORD=${{ secrets.MYSQL_PASSWORD }}/" .env.testing
-          # Désactive les interactions console
           echo "APP_ENV=testing" >> .env.testing
 
       - name: Wait for MySQL to be ready
