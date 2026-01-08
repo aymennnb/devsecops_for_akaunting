@@ -1,29 +1,33 @@
-#dependency-check:
-#  name: OWASP Dependency Check
-#  runs-on: ubuntu-latest
-#  needs: prepare
-#
-#  steps:
-#    - name: Checkout code
-#      uses: actions/checkout@v4
-#
-#    - name: Create directories
-#      run: |
-#        mkdir -p "GitHub Actions/Dependency Check/Reports"
-#
-#    - name: Run OWASP Dependency Check
-#      uses: dependency-check/Dependency-Check_Action@main
-#      with:
-#        path: "."
-#        format: JSON
-#        project: "Akaunting DevSecOps"
-#        args: >
-#          --enableExperimental
-#          --enableRetired
-#
-#    - name: Upload Dependency Check reports
-#      uses: actions/upload-artifact@v4
-#      with:
-#        name: dependency-check-reports-${{ github.sha }}
-#        path: reports/
-#        retention-days: 7
+name: Dependency Check
+on:
+  workflow_call:
+
+jobs:
+  dependency-check:
+    name: OWASP Dependency Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create directories
+        run: |
+          mkdir -p "GitHub Actions/Dependency Check/Reports"
+
+      - name: Run OWASP Dependency Check
+        uses: dependency-check/Dependency-Check_Action@main
+        with:
+          path: "."
+          format: JSON
+          project: "Akaunting DevSecOps"
+          args: >
+            --enableExperimental
+            --enableRetired
+
+      - name: Upload Dependency Check reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-check-reports-${{ github.sha }}
+          path: reports/
+          retention-days: 7

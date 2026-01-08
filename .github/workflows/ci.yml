@@ -25,6 +25,10 @@ jobs:
   secret-detection:
     needs: build
     uses: ./.github/workflows/secret-detection.yml
+  
+  dependency-check:
+    needs: build
+    uses: ./.github/workflows/dependency-check.yml
 
 #  tests:
 #    needs: secret-detection
