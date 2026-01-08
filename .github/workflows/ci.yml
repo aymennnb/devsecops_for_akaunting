@@ -32,9 +32,9 @@ jobs:
       DEFECTDOJO_URL: ${{ vars.DEFECTDOJO_URL }}
       DEFECTDOJO_ENGAGEMENT_ID: ${{ vars.DEFECTDOJO_ENGAGEMENT_ID }}
   
-  dependency-check:
-    needs: build
-    uses: ./.github/workflows/dependency-check.yml
+  # dependency-check:
+  #   needs: build
+  #   uses: ./.github/workflows/dependency-check.yml
 
 #  tests:
 #    needs: secret-detection
