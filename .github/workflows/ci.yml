@@ -26,7 +26,6 @@ jobs:
     needs: build
     uses: ./.github/workflows/secret-detection.yml
     secrets:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       DEFECTDOJO_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
     with:
       DEFECTDOJO_URL: ${{ vars.DEFECTDOJO_URL }}
