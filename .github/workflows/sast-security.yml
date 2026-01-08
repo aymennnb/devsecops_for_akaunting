@@ -24,16 +24,9 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: true
 
-    outputs:
-      reports-generated: ${{ steps.upload-reports.outcome == 'success' }}
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Create report directories
-        run: |
-          mkdir -p "GitHub Actions/SAST Security/Reports"
 
       - name: Install Semgrep
         run: |
@@ -43,7 +36,7 @@ jobs:
         id: semgrep-general
         run: |
           echo "== Scan général Semgrep... =="
-          semgrep ci --config=auto --json > "GitHub Actions/SAST Security/Reports/semgrep-general.json" || true
+          semgrep ci --config=auto --json > semgrep-general.json || true
           echo "== Scan général terminé =="
         continue-on-error: true
 
@@ -51,18 +44,24 @@ jobs:
         id: semgrep-owasp
         run: |
           echo "== Scan OWASP Semgrep... =="
-          semgrep ci --config=p/owasp-top-ten --json > "GitHub Actions/SAST Security/Reports/semgrep-owasp.json" || true
+          semgrep ci --config=p/owasp-top-ten --json > semgrep-owasp.json || true
           echo "== Scan OWASP terminé =="
         continue-on-error: true
 
-      - name: Upload Semgrep reports
-        id: upload-reports
+      - name: Upload Semgrep General report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: semgrep-sast-reports
-          path: |
-            GitHub Actions/SAST Security/Reports/
+          name: semgrep-general-report
+          path: semgrep-general.json
+          retention-days: 7
+
+      - name: Upload Semgrep OWASP report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: semgrep-owasp-report
+          path: semgrep-owasp.json
           retention-days: 7
 
   snyk-sast:
@@ -140,11 +139,17 @@ jobs:
     if: always()
 
     steps:
-      - name: Download Semgrep reports
+      - name: Download Semgrep General report
         uses: actions/download-artifact@v4
         with:
-          name: semgrep-sast-reports
-          path: semgrep-reports/
+          name: semgrep-general-report
+          path: ./
+
+      - name: Download Semgrep OWASP report
+        uses: actions/download-artifact@v4
+        with:
+          name: semgrep-owasp-report
+          path: ./
 
       - name: Upload Semgrep General report to DefectDojo
         env:
@@ -152,13 +157,13 @@ jobs:
           DD_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
           DD_ENGAGEMENT_ID: ${{ inputs.DEFECTDOJO_ENGAGEMENT_ID }}
         run: |
-          if [ -f "semgrep-reports/GitHub Actions/SAST Security/Reports/semgrep-general.json" ]; then
+          if [ -f "semgrep-general.json" ]; then
             echo "Uploading Semgrep General report to DefectDojo..."
             curl -X POST "$DD_URL/api/v2/import-scan/" \
               -H "Authorization: Token $DD_API_KEY" \
               -F "engagement=$DD_ENGAGEMENT_ID" \
               -F "scan_type=Semgrep JSON Report" \
-              -F "file=@semgrep-reports/GitHub Actions/SAST Security/Reports/semgrep-general.json" \
+              -F "file=@semgrep-general.json" \
               -F "verified=true" \
               -F "active=true" \
               -F "close_old_findings=true" \
@@ -173,13 +178,13 @@ jobs:
           DD_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
           DD_ENGAGEMENT_ID: ${{ inputs.DEFECTDOJO_ENGAGEMENT_ID }}
         run: |
-          if [ -f "semgrep-reports/GitHub Actions/SAST Security/Reports/semgrep-owasp.json" ]; then
+          if [ -f "semgrep-owasp.json" ]; then
             echo "Uploading Semgrep OWASP report to DefectDojo..."
             curl -X POST "$DD_URL/api/v2/import-scan/" \
               -H "Authorization: Token $DD_API_KEY" \
               -F "engagement=$DD_ENGAGEMENT_ID" \
               -F "scan_type=Semgrep JSON Report" \
-              -F "file=@semgrep-reports/GitHub Actions/SAST Security/Reports/semgrep-owasp.json" \
+              -F "file=@semgrep-owasp.json" \
               -F "verified=true" \
               -F "active=true" \
               -F "close_old_findings=true" \
@@ -199,7 +204,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: snyk-sast-report
-          path: snyk-report/
+          path: ./
 
       - name: Upload Snyk report to DefectDojo
         env:
@@ -207,13 +212,13 @@ jobs:
           DD_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
           DD_ENGAGEMENT_ID: ${{ inputs.DEFECTDOJO_ENGAGEMENT_ID }}
         run: |
-          if [ -f "snyk-report/snyk.sarif" ]; then
+          if [ -f "snyk.sarif" ]; then
             echo "Uploading Snyk SARIF report to DefectDojo..."
             curl -X POST "$DD_URL/api/v2/import-scan/" \
               -H "Authorization: Token $DD_API_KEY" \
               -F "engagement=$DD_ENGAGEMENT_ID" \
               -F "scan_type=Snyk Scan" \
-              -F "file=@snyk-report/snyk.sarif" \
+              -F "file=@snyk.sarif" \
               -F "verified=true" \
               -F "active=true" \
               -F "close_old_findings=true" \
