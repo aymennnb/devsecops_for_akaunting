@@ -148,24 +148,57 @@ jobs:
 #        run: |
 #          echo "== Terraform security scan completed =="
 
-  quick-deploy:
+  check-ecs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Deploy with AWS CLI
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: us-east-1
+      - name: Configure AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Check ECS Cluster
         run: |
-          # Installation AWS CLI (déjà présent sur runner)
-          echo "== Testing AWS credentials =="
+          echo "== Checking ECS Cluster =="
 
-          # Configuration manuelle
-          aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
-          aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
-          aws configure set region $AWS_REGION
+          # 1. Lister tous les clusters
+          echo "1. Listing all ECS clusters..."
+          aws ecs list-clusters --region us-east-1
 
-          # Test
-          echo "Testing connection..."
-          aws sts get-caller-identity
+          # 2. Décrire le cluster akaunting-cluster
+          echo "2. Describing 'akaunting-cluster'..."
+          aws ecs describe-clusters \
+            --clusters akaunting-cluster \
+            --region us-east-1 \
+            --query 'clusters[0]' || echo "Cluster not found"
+
+      - name: Check ECS Service
+        run: |
+          echo "== Checking ECS Service =="
+
+          # 1. Lister les services dans le cluster
+          echo "1. Listing services in cluster..."
+          aws ecs list-services \
+            --cluster akaunting-cluster \
+            --region us-east-1 \
+            --query 'serviceArns' || echo "Cannot list services"
+
+          # 2. Décrire le service
+          echo "2. Describing 'akaunting-service'..."
+          aws ecs describe-services \
+            --cluster akaunting-cluster \
+            --services akaunting-service \
+            --region us-east-1 \
+            --query 'services[0]' || echo "Service not found"
+
+      - name: Check Task Definitions
+        run: |
+          echo "== Checking Task Definitions =="
+
+          # Lister les task definitions
+          aws ecs list-task-definitions \
+            --region us-east-1 \
+            --query 'taskDefinitionArns' \
+            --output table
