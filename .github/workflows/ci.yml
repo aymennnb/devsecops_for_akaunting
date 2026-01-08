@@ -60,9 +60,14 @@ jobs:
 #    uses: ./.github/workflows/build-image.yml
 #    secrets: inherit
 #
-#  dast-security:
-#    needs: [ build-image ]
-#    uses: ./.github/workflows/dast-security.yml
+  dast-security:
+    needs: [sast-security]
+    uses: ./.github/workflows/dast-security.yml
+    secrets:
+      DEFECTDOJO_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
+    with:
+      DEFECTDOJO_URL: ${{ vars.DEFECTDOJO_URL }}
+      DEFECTDOJO_ENGAGEMENT_ID: ${{ vars.DEFECTDOJO_ENGAGEMENT_ID }}
 #
 #  scan-trivy:
 #    needs: [ build-image, sast-security, dast-security ]

@@ -2,6 +2,16 @@ name: DAST Security with OWASP ZAP
 
 on:
   workflow_call:
+    inputs:
+      DEFECTDOJO_URL:
+        required: true
+        type: string
+      DEFECTDOJO_ENGAGEMENT_ID:
+        required: true
+        type: string
+    secrets:
+      DEFECTDOJO_API_KEY:
+        required: true
 
 jobs:
   owasp-zap-dast:
@@ -16,10 +26,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Create directories
-        run: |
-          mkdir -p "GitHub Actions/DAST Security/Reports"
 
       - name: Download Docker image artifact
         uses: actions/download-artifact@v4
@@ -66,23 +72,30 @@ jobs:
           cmd_options: "-a"
         continue-on-error: true
 
+      - name: Rename ZAP report
+        if: always()
+        run: |
+          if [ -f "report_json.json" ]; then
+            mv report_json.json zap-scan-report.json
+            echo "ZAP report renamed to zap-scan-report.json"
+          else
+            echo "ZAP report not found"
+          fi
+
       - name: Upload ZAP scan results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: zap-scan-results-${{ github.sha }}
-          path: |
-            report_md.md
-            report_html.html
-            report_json.json
+          name: zap-scan-report
+          path: zap-scan-report.json
           retention-days: 7
 
       - name: Stop Docker container
         if: always()
         run: |
           echo "=== Stopping Docker container ==="
-          docker stop akaunting-app
-          docker rm akaunting-app
+          docker stop akaunting-app || true
+          docker rm akaunting-app || true
 
   nuclei-dast:
     name: DAST Security with Nuclei
@@ -96,10 +109,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Create directories
-        run: |
-          mkdir -p "GitHub Actions/DAST Security/Reports/Nuclei"
 
       - name: Download Docker image artifact
         uses: actions/download-artifact@v4
@@ -149,24 +158,24 @@ jobs:
             -severity medium,high,critical \
             -rate-limit 150 \
             -timeout 30 \
-            -json-export "GitHub Actions/DAST Security/Reports/Nuclei/nuclei-results.json"
+            -json-export nuclei-results.json || true
 
       - name: Format JSON report
         run: |
           echo "=== Formatting JSON report ==="
-          if [ -s "GitHub Actions/DAST Security/Reports/Nuclei/nuclei-results.json" ]; then
-            jq '.' "GitHub Actions/DAST Security/Reports/Nuclei/nuclei-results.json" > "GitHub Actions/DAST Security/Reports/Nuclei/nuclei-report.json"
+          if [ -s "nuclei-results.json" ]; then
+            jq '.' "nuclei-results.json" > nuclei-dast-report.json
             echo "JSON report formatted"
           else
-            echo "No results found" > "GitHub Actions/DAST Security/Reports/Nuclei/nuclei-report.json"
+            echo '{"info": "No results found"}' > nuclei-dast-report.json
           fi
 
       - name: Upload Nuclei results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: nuclei-dast-results-${{ github.sha }}
-          path: GitHub Actions/DAST Security/Reports/Nuclei/nuclei-report.json
+          name: nuclei-dast-report
+          path: nuclei-dast-report.json
           retention-days: 7
 
       - name: Stop container
@@ -174,3 +183,71 @@ jobs:
         run: |
           docker stop nuclei-app || true
           docker rm nuclei-app || true
+
+  upload-zap-to-defectdojo:
+    name: Upload ZAP report to DefectDojo
+    runs-on: ubuntu-latest
+    needs: owasp-zap-dast
+    if: always()
+
+    steps:
+      - name: Download ZAP report
+        uses: actions/download-artifact@v4
+        with:
+          name: zap-scan-report
+          path: ./
+
+      - name: Upload ZAP report to DefectDojo
+        env:
+          DD_URL: ${{ inputs.DEFECTDOJO_URL }}
+          DD_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
+          DD_ENGAGEMENT_ID: ${{ inputs.DEFECTDOJO_ENGAGEMENT_ID }}
+        run: |
+          if [ -f "zap-scan-report.json" ]; then
+            echo "Uploading ZAP report to DefectDojo..."
+            curl -X POST "$DD_URL/api/v2/import-scan/" \
+              -H "Authorization: Token $DD_API_KEY" \
+              -F "engagement=$DD_ENGAGEMENT_ID" \
+              -F "scan_type=ZAP Scan" \
+              -F "file=@zap-scan-report.json" \
+              -F "verified=true" \
+              -F "active=true" \
+              -F "close_old_findings=true" \
+              -F "skip_duplicates=true"
+          else
+            echo "ZAP report not found"
+          fi
+
+  upload-nuclei-to-defectdojo:
+    name: Upload Nuclei report to DefectDojo
+    runs-on: ubuntu-latest
+    needs: nuclei-dast
+    if: always()
+
+    steps:
+      - name: Download Nuclei report
+        uses: actions/download-artifact@v4
+        with:
+          name: nuclei-dast-report
+          path: ./
+
+      - name: Upload Nuclei report to DefectDojo
+        env:
+          DD_URL: ${{ inputs.DEFECTDOJO_URL }}
+          DD_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
+          DD_ENGAGEMENT_ID: ${{ inputs.DEFECTDOJO_ENGAGEMENT_ID }}
+        run: |
+          if [ -f "nuclei-dast-report.json" ]; then
+            echo "Uploading Nuclei report to DefectDojo..."
+            curl -X POST "$DD_URL/api/v2/import-scan/" \
+              -H "Authorization: Token $DD_API_KEY" \
+              -F "engagement=$DD_ENGAGEMENT_ID" \
+              -F "scan_type=Nuclei Scan" \
+              -F "file=@nuclei-dast-report.json" \
+              -F "verified=true" \
+              -F "active=true" \
+              -F "close_old_findings=true" \
+              -F "skip_duplicates=true"
+          else
+            echo "Nuclei report not found"
+          fi
