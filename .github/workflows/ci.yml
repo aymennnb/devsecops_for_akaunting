@@ -13,13 +13,13 @@ on:
     branches: [main]
 
 jobs:
-#  build:
-#    uses: ./.github/workflows/build.yml
-#    secrets:
-#      MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
-#      MYSQL_USER: ${{ secrets.MYSQL_USER }}
-#      MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
-#      MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
+  build:
+    uses: ./.github/workflows/build.yml
+    secrets:
+      MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
+      MYSQL_USER: ${{ secrets.MYSQL_USER }}
+      MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
+      MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
 
 #  secret-detection:
 #    needs: build
@@ -54,10 +54,10 @@ jobs:
 #      DEFECTDOJO_URL: ${{ vars.DEFECTDOJO_URL }}
 #      DEFECTDOJO_ENGAGEMENT_ID: ${{ vars.DEFECTDOJO_ENGAGEMENT_ID }}
 
-#  build-image:
-#    needs: build
-#    uses: ./.github/workflows/build-image.yml
-#    secrets: inherit
+  build-image:
+    needs: build
+    uses: ./.github/workflows/build-image.yml
+    secrets: inherit
 #
 #  dast-security:
 #    needs: build-image
@@ -77,13 +77,13 @@ jobs:
 #      DEFECTDOJO_URL: ${{ vars.DEFECTDOJO_URL }}
 #      DEFECTDOJO_ENGAGEMENT_ID: ${{ vars.DEFECTDOJO_ENGAGEMENT_ID }}
 #
-#  push:
-#    needs: build-image
-#    uses: ./.github/workflows/push-to-registry.yml
-#    secrets: inherit
+  push:
+    needs: build-image
+    uses: ./.github/workflows/push-to-registry.yml
+    secrets: inherit
 
   notify:
-#    needs: push
+    needs: push
     uses: ./.github/workflows/notify.yml
     secrets:
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
