@@ -15,7 +15,7 @@ on:
 
 env:
   AWS_REGION: us-east-1
-  DOCKER_IMAGE: "aymen138/akaunting_devops_project:latest"
+  DOCKER_IMAGE: "aymen138/akaunting_devops_project"
 
 jobs:
   deploy:
@@ -50,7 +50,7 @@ jobs:
         working-directory: ./terraform
         run: |
           echo "== Deploying to AWS ECS =="
-          terraform apply -auto-approve
+          terraform apply -auto-approve -lock=false  # ← CORRECTION ICI
 
       - name: Verify deployment
         run: |
