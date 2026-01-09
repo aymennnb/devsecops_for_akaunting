@@ -20,7 +20,7 @@ env:
 jobs:
   deploy:
     name: Deploy to AWS ECS
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     environment:
       name: production
 
