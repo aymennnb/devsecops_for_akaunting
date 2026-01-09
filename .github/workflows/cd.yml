@@ -1,17 +1,21 @@
 name: CD Akaunting Pipeline
 
 on:
+  workflow_run:
+    workflows: ["CI Akaunting pipeline"]
+    types:
+      - completed
   workflow_dispatch:
     inputs:
       image_tag:
-        description: 'Docker image tag'
+        description: 'Docker image tag (default: latest)'
         required: false
         default: 'latest'
         type: string
 
 env:
   AWS_REGION: us-east-1
-  DOCKER_IMAGE: "aymen138/akaunting_devops_project"
+  DOCKER_IMAGE: "aymen138/akaunting_devops_project:latest"
 
 jobs:
   deploy:
@@ -38,14 +42,17 @@ jobs:
         working-directory: ./terraform
         run: terraform init
 
-      - name: Terraform Apply (without lock)
+      - name: Terraform Validate
+        working-directory: ./terraform
+        run: terraform validate
+
+      - name: Terraform Apply
         working-directory: ./terraform
         run: |
           echo "== Deploying to AWS ECS =="
-          terraform apply -auto-approve -lock=false
+          terraform apply -auto-approve
 
       - name: Verify deployment
         run: |
           echo "== Deployment completed =="
           echo "Application should be available soon"
-
