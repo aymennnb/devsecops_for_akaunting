@@ -11,7 +11,8 @@ on:
 
 env:
   AWS_REGION: us-east-1
-  DOCKER_IMAGE: "aymen138/akaunting_devops_project:latest"
+  DOCKER_IMAGE: "aymen138/akaunting_devops_project"
+  IMAGE_TAG: ${{ github.event.inputs.image_tag || 'latest' }}
 
 jobs:
   deploy:
@@ -26,6 +27,8 @@ jobs:
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.5.0
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -38,13 +41,22 @@ jobs:
         working-directory: ./terraform
         run: terraform init
 
+      - name: Terraform Validate
+        working-directory: ./terraform
+        run: terraform validate
+
+      - name: Terraform Plan
+        working-directory: ./terraform
+        run: terraform plan -out=tfplan
+
       - name: Terraform Apply
         working-directory: ./terraform
-        run: |
-          echo "== Deploying to AWS ECS =="
-          terraform apply -auto-approve
+        run: terraform apply -auto-approve tfplan
 
-      - name: Verify deployment
+      - name: Verify ECS Service
         run: |
-          echo "== Deployment completed =="
-          echo "Application should be available soon"
+          echo "== Vérification du déploiement =="
+          aws ecs describe-services \
+            --cluster akaunting-cluster \
+            --services akaunting-service \
+            --region ${{ env.AWS_REGION }}
