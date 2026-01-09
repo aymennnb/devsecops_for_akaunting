@@ -48,3 +48,4 @@ jobs:
         run: |
           echo "== Deployment completed =="
           echo "Application should be available soon"
+
