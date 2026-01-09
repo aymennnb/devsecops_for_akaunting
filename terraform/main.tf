@@ -1,6 +1,4 @@
 terraform {
-  required_version = ">= 1.0.0"
-
   required_providers {
     aws = {
       source  = "hashicorp/aws"
@@ -13,18 +11,7 @@ provider "aws" {
   region = "us-east-1"
 }
 
-# Variables
-variable "docker_image" {
-  description = "Docker image name"
-  default     = "aymen138/akaunting_devops_project"
-}
-
-variable "image_tag" {
-  description = "Docker image tag"
-  default     = "latest"
-}
-
-# Utilise le VPC par défaut AWS
+# Utilise le VPC par défaut AWS (PLUS SIMPLE)
 data "aws_vpc" "default" {
   default = true
 }
@@ -84,7 +71,7 @@ resource "aws_iam_role_policy_attachment" "ecs_execution" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
-# Task Definition avec image dynamique
+# Task Definition
 resource "aws_ecs_task_definition" "akaunting" {
   family                   = "akaunting-task"
   network_mode             = "awsvpc"
@@ -95,7 +82,7 @@ resource "aws_ecs_task_definition" "akaunting" {
 
   container_definitions = jsonencode([{
     name      = "akaunting"
-    image     = "${var.docker_image}:${var.image_tag}"
+    image     = "aymen138/akaunting_devops_project:latest"
     cpu       = 1024
     memory    = 2048
     essential = true
@@ -103,21 +90,7 @@ resource "aws_ecs_task_definition" "akaunting" {
       containerPort = 80
       hostPort      = 80
     }]
-    logConfiguration = {
-      logDriver = "awslogs"
-      options = {
-        awslogs-group         = "/ecs/akaunting"
-        awslogs-region        = "us-east-1"
-        awslogs-stream-prefix = "ecs"
-      }
-    }
   }])
-}
-
-# CloudWatch Log Group
-resource "aws_cloudwatch_log_group" "akaunting" {
-  name              = "/ecs/akaunting"
-  retention_in_days = 30
 }
 
 # Service ECS
@@ -135,22 +108,4 @@ resource "aws_ecs_service" "akaunting" {
   }
 
   force_new_deployment = true
-
-  depends_on = [
-    aws_iam_role_policy_attachment.ecs_execution
-  ]
-
-  # Déclenche un redéploiement quand la task definition change
-  triggers = {
-    redeployment = timestamp()
-  }
-}
-
-# Outputs
-output "ecs_service_url" {
-  value = "http://${aws_ecs_service.akaunting.load_balancer[0].dns_name}"
-}
-
-output "deployed_image" {
-  value = "${var.docker_image}:${var.image_tag}"
 }
