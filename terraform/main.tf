@@ -21,8 +21,7 @@ data "aws_subnets" "default" {
   }
 }
 
-# Utilisation de count pour les ressources optionnelles
-resource "aws_ecs_cluster" "akaunting" {
+# resource "aws_ecs_cluster" "akaunting" {
   name = "akaunting-cluster-${var.environment}"
 
   setting {
