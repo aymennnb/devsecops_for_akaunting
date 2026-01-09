@@ -10,6 +10,7 @@ provider "aws" {
   }
 }
 
+# VPC par défaut
 data "aws_vpc" "default" {
   default = true
 }
@@ -21,37 +22,60 @@ data "aws_subnets" "default" {
   }
 }
 
-# resource "aws_ecs_cluster" "akaunting" {
+# 1. Cluster ECS - VOUS AVIEZ OUBLIÉ "resource ... {"
+resource "aws_ecs_cluster" "akaunting" {
   name = "akaunting-cluster-${var.environment}"
 
   setting {
     name  = "containerInsights"
     value = var.enable_monitoring ? "enabled" : "disabled"
   }
-
-  lifecycle {
-    prevent_destroy = true  # Empêche la destruction accidentelle
-  }
 }
 
-# Security Group avec règles dynamiques
+# 2. IAM Role - AJOUTEZ CETTE RESSOURCE MANQUANTE
+resource "aws_iam_role" "ecs_execution" {
+  name = "akaunting-ecs-role-${var.environment}"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action = "sts:AssumeRole"
+      Effect = "Allow"
+      Principal = {
+        Service = "ecs-tasks.amazonaws.com"
+      }
+    }]
+  })
+}
+
+# 3. Attachement de policy IAM
+resource "aws_iam_role_policy_attachment" "ecs_execution" {
+  role       = aws_iam_role.ecs_execution.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+}
+
+# 4. CloudWatch Log Group - AJOUTEZ CETTE RESSOURCE MANQUANTE
+resource "aws_cloudwatch_log_group" "akaunting" {
+  name              = "/ecs/akaunting-${var.environment}"
+  retention_in_days = 30
+}
+
+# 5. Security Group
 resource "aws_security_group" "akaunting" {
   name        = "akaunting-sg-${var.environment}"
   description = "Security group for Akaunting ECS"
   vpc_id      = data.aws_vpc.default.id
 
-  dynamic "ingress" {
-    for_each = var.environment == "production" ? [1] : []
-    content {
-      description = "HTTP from anywhere"
-      from_port   = 80
-      to_port     = 80
-      protocol    = "tcp"
-      cidr_blocks = ["0.0.0.0/0"]
-    }
+  ingress {
+    description = "HTTP from anywhere"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   egress {
+    description = "Allow all outbound traffic"
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
@@ -63,7 +87,7 @@ resource "aws_security_group" "akaunting" {
   }
 }
 
-# Task Definition qui change seulement si l'image change
+# 6. Task Definition
 resource "aws_ecs_task_definition" "akaunting" {
   family                   = "akaunting-task-${var.environment}"
   network_mode             = "awsvpc"
@@ -74,7 +98,7 @@ resource "aws_ecs_task_definition" "akaunting" {
 
   container_definitions = jsonencode([{
     name      = "akaunting"
-    image     = "aymen138/akaunting_devops_project:${var.docker_image_tag}"
+    image     = "${var.docker_image}:${var.docker_image_tag}"
     cpu       = 1024
     memory    = 2048
     essential = true
@@ -92,18 +116,9 @@ resource "aws_ecs_task_definition" "akaunting" {
       }
     }
   }])
-
-  # Force une nouvelle révision seulement si l'image change
-  lifecycle {
-    create_before_destroy = true
-    ignore_changes = [
-      # Ignore les changements de tags qui ne sont pas critiques
-      tags_all
-    ]
-  }
 }
 
-# Service ECS avec stratégie de déploiement
+# 7. Service ECS
 resource "aws_ecs_service" "akaunting" {
   name            = "akaunting-service-${var.environment}"
   cluster         = aws_ecs_cluster.akaunting.id
@@ -111,31 +126,11 @@ resource "aws_ecs_service" "akaunting" {
   desired_count   = 1
   launch_type     = "FARGATE"
 
-  deployment_controller {
-    type = "ECS"
-  }
-
-  deployment_circuit_breaker {
-    enable   = true
-    rollback = true
-  }
-
   network_configuration {
     subnets          = data.aws_subnets.default.ids
     security_groups  = [aws_security_group.akaunting.id]
     assign_public_ip = true
   }
 
-  # Permet un déploiement progressif
-  ordered_placement_strategy {
-    type  = "spread"
-    field = "attribute:ecs.availability-zone"
-  }
-
-  lifecycle {
-    ignore_changes = [
-      desired_count,  # Peut être géré par Auto Scaling
-      task_definition  # Géré par la force_new_deployment
-    ]
-  }
+  force_new_deployment = true
 }

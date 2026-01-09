@@ -15,3 +15,9 @@ variable "enable_monitoring" {
   type        = bool
   default     = true
 }
+
+variable "docker_image" {
+  description = "Docker image name without tag"
+  type        = string
+  default     = "aymen138/akaunting_devops_project"
+}
